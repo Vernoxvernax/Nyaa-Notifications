@@ -32,7 +32,7 @@ ___
 * On the first run, I'd highly suggest you to keep all notification services deactivated, so you don't get spammed with outdated news.
 
 #### Misc:
-* All requests are executed two seconds from each other.
+* All web-requests are executed two seconds from each other.
 
 ___
 

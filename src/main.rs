@@ -319,7 +319,6 @@ async fn main() {
     let config_clone = config_file.clone();
     if config_file.discord_bot.enabled {
         tokio::spawn(async move {
-            println!("sa");
             discord_bot(&config_clone).await.unwrap();
         }).await.unwrap();
     } else if config_file.gotfiy.enabled || config_file.smtp.enabled {
@@ -376,7 +375,7 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
     let mut updates: Vec<Update> = [].to_vec();
     // This might seem stupid, but considering some torrent lists could grow into thousands, checking for a new comment is a lot more effective this way.
     let mut torrent_file_links: String = String::new();
-    let mut database_iterator = database.iter();
+    let database_iterator = database.iter();
     for torrent in database.clone() {
         torrent_file_links.push_str(&(torrent.torrent_file.as_str().to_owned() + " "));
     };
@@ -400,7 +399,8 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
                     new_torrent: true
                 }].to_vec());
             } else {
-                let database_match = database_iterator.find(|&x| x.torrent_file == torrent.torrent_file).unwrap();
+                let database_match_opt = database_iterator.clone().find(|&x| x.torrent_file.contains(&torrent.torrent_file));
+                let database_match = database_match_opt.unwrap();
                 if database_match.comments < torrent.comments {
                     println!("New comment found.");
                     let amount_new_comments = database_match.comments - torrent.comments;

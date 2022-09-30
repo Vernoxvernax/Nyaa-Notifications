@@ -49,8 +49,10 @@ pub async fn get_database() -> Result<Vec<NyaaTorrent>, sqlx::Error> {
             completed: row.Completed.unwrap() as u64,
             timestamp: row.Timestamp.unwrap() as u64
         } ).collect();
-        Ok(rows)
+        database.close().await;
+        return Ok(rows);
     } else {
-        Ok([].to_vec())
+        database.close().await;
+        return Ok([].to_vec());
     }
 }
