@@ -1,5 +1,25 @@
 {
   "db": "SQLite",
+  "180823bc2240d852547538c642379a36e09e8d7094a1d70a5b8613d3bb9d0dbd": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 9
+      }
+    },
+    "query": "INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) \n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+  },
+  "2bccad2576c16cc6a81c8081a8acf3608cc61f70347de86ec249a441b11ffaa3": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 7
+      }
+    },
+    "query": "UPDATE Main SET Category=?, Title=?, Comments=?, Seeders=?, Leechers=?, Completed=? WHERE Torrent_File=?"
+  },
   "34d9c5386a1f25ca9053d2f1e089b522a22e53347527490bb28f1627d8c85ded": {
     "describe": {
       "columns": [
@@ -65,15 +85,5 @@
       }
     },
     "query": "SELECT * FROM Main"
-  },
-  "c3c8c8d5f1b005801d9299b01b103c6dc29104d5c593e4cc0f93dc1cc412bb2b": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 9
-      }
-    },
-    "query": "INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) \n        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
   }
 }

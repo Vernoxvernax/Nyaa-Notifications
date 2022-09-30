@@ -402,14 +402,14 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
                 let database_match_opt = database_iterator.clone().find(|&x| x.torrent_file.contains(&torrent.torrent_file));
                 let database_match = database_match_opt.unwrap();
                 if database_match.comments < torrent.comments {
-                    println!("New comment found.");
-                    let amount_new_comments = database_match.comments - torrent.comments;
+                    println!("I found a new comment.");
+                    let amount_new_comments = torrent.comments - database_match.comments;
                     let nyaa_comments = get_nyaa_comments(&torrent);
                     updates.append(&mut [Update {
                         nyaa_comments,
                         new_comments: amount_new_comments,
                         nyaa_torrent: torrent,
-                        new_torrent: true
+                        new_torrent: false
                     }].to_vec());
                 };
             }
@@ -417,8 +417,9 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
     }
     if updates.is_empty() {
         println!("NO UPDATES");
-    };
-    updates_to_database(&updates).await.unwrap();
+    } else {
+        updates_to_database(&updates).await.unwrap();
+    }
     updates
 }
 

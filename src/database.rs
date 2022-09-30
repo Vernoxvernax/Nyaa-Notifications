@@ -15,12 +15,19 @@ pub async fn updates_to_database(updates: &Vec<Update>) -> Result<(), sqlx::Erro
         let leechers = update.nyaa_torrent.leechers as i64;
         let completed = update.nyaa_torrent.completed as i64;
         let timestamp = update.nyaa_torrent.timestamp as i64;
-        sqlx::query!("INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) 
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        update.nyaa_torrent.category, update.nyaa_torrent.title, comments, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
-        seeders, leechers, completed, timestamp
-        ).execute(&database).await.expect("insert error");
+        if update.new_torrent {
+            sqlx::query!("INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) 
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            update.nyaa_torrent.category, update.nyaa_torrent.title, comments, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
+            seeders, leechers, completed, timestamp
+            ).execute(&database).await.expect("insert error");
+        } else {
+            sqlx::query!("UPDATE Main SET Category=?, Title=?, Comments=?, Seeders=?, Leechers=?, Completed=? WHERE Torrent_File=?",
+            update.nyaa_torrent.category, update.nyaa_torrent.title, comments, seeders, leechers, completed, update.nyaa_torrent.torrent_file
+            ).execute(&database).await.expect("insert error");
+        }
     };
+    println!("Updated database");
     database.close().await;
     Ok(())
 }
