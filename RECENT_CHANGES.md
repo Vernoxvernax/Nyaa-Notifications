@@ -1,1 +1,1 @@
-Comment notifications are now properly working.
+Attempts at making requests a little bit safer.

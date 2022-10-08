@@ -344,24 +344,36 @@ async fn main() {
 
 
 async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
-    let mut nyaa_page = get_nyaa(&config_file.main.nyaa_url).expect("Connection to nyaa failed.").expect("Connection to nyaa failed.");
+    let mut updates: Vec<Update> = [].to_vec();
+    let mut nyaa_page_res = get_nyaa(&config_file.main.nyaa_url);
+    if nyaa_page_res.is_err() {
+        println!("Web requests are failing.");
+        return updates
+    }
+    let mut nyaa_page = nyaa_page_res.unwrap();
     let mut page_array: Vec<NyaaPage> = [].to_vec();
-    let mut page_number = 1;
+    let mut page_number = 2;
     loop {
         match serizalize_user_page(&nyaa_page) {
             Ok(page) => {
                 page_array.append(&mut [page.clone()].to_vec());
                 if page.incomplete && config_file.main.complete_result || page.incomplete && config_file.main.nyaa_url.contains('?') {
-                    page_number += 1;
                     println!("Waiting 2 seconds");
                     tokio::time::sleep(Duration::from_secs(2)).await;
-                    nyaa_page = get_nyaa(&format!("{}{}{}", &config_file.main.nyaa_url,
+                    nyaa_page_res = get_nyaa(&format!("{}{}{}", &config_file.main.nyaa_url,
                     if config_file.main.nyaa_url.contains('?') {
                         "&p="
                     } else {
                         "?p="
                     },
-                    page_number)).unwrap().expect("Connection to nyaa failed.");
+                    page_number));
+                    if nyaa_page_res.is_err() {
+                        println!("Web requests are failing.");
+                        tokio::time::sleep(Duration::from_secs(20)).await;
+                        continue
+                    }
+                    nyaa_page = nyaa_page_res.unwrap();
+                    page_number += 1;
                 } else {
                     break
                 }
@@ -372,7 +384,6 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
         }
     };
     let database = get_database().await.unwrap();
-    let mut updates: Vec<Update> = [].to_vec();
     // This might seem stupid, but considering some torrent lists could grow into thousands, checking for a new comment is a lot more effective this way.
     let mut torrent_file_links: String = String::new();
     let database_iterator = database.iter();
@@ -426,7 +437,7 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
 
 fn get_nyaa_comments(torrent: &NyaaTorrent) -> Vec<NyaaComment> {
     let url = &torrent.torrent_file.trim_end_matches(".torrent").replace("download", "view");
-    let nyaa_page = get_nyaa(url).unwrap().expect("Connection for nyaa failed.");
+    let nyaa_page = get_nyaa(url).expect("Connection for nyaa failed.");
     match serizalize_torrent_page(&nyaa_page) {
         Ok(update) => {
             update
@@ -587,18 +598,18 @@ fn send_gotify(config_file: &ConfigFile, json: serde_json::Value) -> Result<(), 
 }
 
 
-fn get_nyaa(nyaa_url: &String) -> Result<Result<String, String>, isahc::Error> {
+fn get_nyaa(nyaa_url: &String) -> Result<String, error::Error> {
     println!("Requesting: {}", nyaa_url);
     let mut get_response = Request::get(nyaa_url)
         .timeout(Duration::from_secs(10))
-        .body(())?.send()?;
+        .body(()).expect("Failed to create request.").send().expect("Sending request");
     let response = match get_response.status() {
         StatusCode::OK => {
             Ok(get_response.text().unwrap())
         },
         _ => {
-            Err("Failed to get nyaa page".to_string())
+            Err(get_response)
         }
     };
-    Ok(response)
+    Ok(response.unwrap())
 }
