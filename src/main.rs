@@ -116,7 +116,7 @@ struct Gotify {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct Main {
-    nyaa_url: String,
+    nyaa_url: Vec<String>,
     complete_result: bool,
     update_delay: u64
 }
@@ -158,96 +158,46 @@ impl EventHandler for Handler {
         tokio::spawn(async move {
             loop {
                 println!("Checking at: {}", chrono::Local::now());
-                let updates = nyaa_check(&config_clone).await;
-                if config_clone.gotfiy.enabled || config_clone.smtp.enabled {
-                    send_notification(&config_clone, &updates).await.unwrap();
-                };
-                for update in updates {
-                    for channel_id in config_clone.discord_bot.channel_ids.clone() {
-                        if update.new_torrent {
-                            let timestamp = &update.nyaa_torrent.timestamp.to_string()[0..update.nyaa_torrent.timestamp.to_string().len()].parse::<i64>().unwrap();
-                            let nanosec = &update.nyaa_torrent.timestamp.to_string()[update.nyaa_torrent.timestamp.to_string().len() - 3..update.nyaa_torrent.timestamp.to_string().len()].parse::<u32>().unwrap();
-                            let utc_time = chrono::DateTime::<chrono::Utc>::from_utc(NaiveDateTime::from_timestamp(*timestamp, *nanosec), chrono::Utc);
-                            let discord_message = ChannelId(channel_id)
-                            .send_message(&ctx, |m| {
-                                m.embed(|e| {
-                                    e.title(update.nyaa_torrent.title.clone())
-                                    .color(Color::BLITZ_BLUE)
-                                    .thumbnail("https://avatars3.githubusercontent.com/u/28658394?v=4&s=400")
-                                    .author(|a| {
-                                        a.name("Found in this feed!")
-                                        .url(config_clone.main.nyaa_url.clone())
-                                    })
-                                    .description("A new release!")
-                                    .fields(vec![
-                                        ("Category", update.nyaa_torrent.category.clone(), false),
-                                        ("Size", update.nyaa_torrent.size.clone(), false)
-                                    ])
-                                    .footer(|f| {
-                                        f.text("Uploaded at")
-                                    })
-                                    .timestamp(utc_time)
-                                }).components(|c| {
-                                    c.create_action_row(|r| {
-                                        r.create_button(|b| {
-                                            b.label("Nyaa.si")
-                                            .url(update.nyaa_torrent.torrent_file.replace("download", "view").strip_suffix(".torrent").unwrap())
-                                            .style(serenity::model::prelude::component::ButtonStyle::Link)
-                                        })
-                                        .create_button(|b| {
-                                            b.label("Torrent-File")
-                                            .url(update.nyaa_torrent.torrent_file.clone())
-                                            .style(serenity::model::prelude::component::ButtonStyle::Link)
-                                        })
-                                    })
-                                })
-                            }).await;
-                            if let Err(w) = discord_message {
-                                eprintln!("Failed to create message: {:?}", w)
-                            };
-                        };
-                        if update.new_comments > 0 && config_clone.discord_bot.comment_notifications {
-                            for comment_index in update.nyaa_comments.len() as u64 - update.new_comments..update.nyaa_comments.len() as u64 {
-                                let nyaa_comment = update.nyaa_comments.iter().nth(comment_index as usize).unwrap();
-                                let timestamp_op1 = if nyaa_comment.timestamp.contains('.') {
-                                    let mut temp: String = String::new();
-                                    for ch in nyaa_comment.timestamp.chars() {
-                                        if ch == '.' {
-                                            break
-                                        } else {
-                                            temp.push_str(ch.to_string().as_str())
-                                        }
-                                    };
-                                    temp
-                                } else {
-                                    nyaa_comment.timestamp.to_string()
-                                };
-                                let seconds = timestamp_op1[0..timestamp_op1.len()].parse::<i64>().unwrap();
-                                let nanosec = timestamp_op1[timestamp_op1.len() - 3..timestamp_op1.len()].parse::<u32>().unwrap();
-                                let utc_time_comment = chrono::DateTime::<chrono::Utc>::from_utc(NaiveDateTime::from_timestamp(seconds, nanosec), chrono::Utc);
+                for nyaa_url in config_clone.clone().main.nyaa_url {
+                    let updates = nyaa_check(&config_clone, &nyaa_url).await;
+                    if config_clone.gotfiy.enabled || config_clone.smtp.enabled {
+                        send_notification(&config_clone, &updates).await.unwrap();
+                    };
+                    for update in updates {
+                        for channel_id in config_clone.discord_bot.channel_ids.clone() {
+                            if update.new_torrent {
+                                let timestamp = &update.nyaa_torrent.timestamp.to_string()[0..update.nyaa_torrent.timestamp.to_string().len()].parse::<i64>().unwrap();
+                                let nanosec = &update.nyaa_torrent.timestamp.to_string()[update.nyaa_torrent.timestamp.to_string().len() - 3..update.nyaa_torrent.timestamp.to_string().len()].parse::<u32>().unwrap();
+                                let utc_time = chrono::DateTime::<chrono::Utc>::from_utc(NaiveDateTime::from_timestamp(*timestamp, *nanosec), chrono::Utc);
                                 let discord_message = ChannelId(channel_id)
                                 .send_message(&ctx, |m| {
                                     m.embed(|e| {
                                         e.title(update.nyaa_torrent.title.clone())
                                         .color(Color::BLITZ_BLUE)
-                                        .thumbnail(nyaa_comment.gravatar.clone().replace("amp;", ""))
+                                        .thumbnail("https://avatars3.githubusercontent.com/u/28658394?v=4&s=400")
                                         .author(|a| {
                                             a.name("Found in this feed!")
-                                            .url(config_clone.main.nyaa_url.clone())
+                                            .url(nyaa_url.clone())
                                         })
-                                        .description("A new comment!")
+                                        .description("A new release!")
                                         .fields(vec![
-                                            (nyaa_comment.user.clone() + ":", nyaa_comment.message.clone(), false),
+                                            ("Category", update.nyaa_torrent.category.clone(), false),
+                                            ("Size", update.nyaa_torrent.size.clone(), false)
                                         ])
                                         .footer(|f| {
                                             f.text("Uploaded at")
                                         })
-                                        .timestamp(utc_time_comment)
+                                        .timestamp(utc_time)
                                     }).components(|c| {
                                         c.create_action_row(|r| {
                                             r.create_button(|b| {
                                                 b.label("Nyaa.si")
                                                 .url(update.nyaa_torrent.torrent_file.replace("download", "view").strip_suffix(".torrent").unwrap())
+                                                .style(serenity::model::prelude::component::ButtonStyle::Link)
+                                            })
+                                            .create_button(|b| {
+                                                b.label("Torrent-File")
+                                                .url(update.nyaa_torrent.torrent_file.clone())
                                                 .style(serenity::model::prelude::component::ButtonStyle::Link)
                                             })
                                         })
@@ -257,6 +207,58 @@ impl EventHandler for Handler {
                                     eprintln!("Failed to create message: {:?}", w)
                                 };
                             };
+                            if update.new_comments > 0 && config_clone.discord_bot.comment_notifications {
+                                for comment_index in update.nyaa_comments.len() as u64 - update.new_comments..update.nyaa_comments.len() as u64 {
+                                    let nyaa_comment = update.nyaa_comments.iter().nth(comment_index as usize).unwrap();
+                                    let timestamp_op1 = if nyaa_comment.timestamp.contains('.') {
+                                        let mut temp: String = String::new();
+                                        for ch in nyaa_comment.timestamp.chars() {
+                                            if ch == '.' {
+                                                break
+                                            } else {
+                                                temp.push_str(ch.to_string().as_str())
+                                            }
+                                        };
+                                        temp
+                                    } else {
+                                        nyaa_comment.timestamp.to_string()
+                                    };
+                                    let seconds = timestamp_op1[0..timestamp_op1.len()].parse::<i64>().unwrap();
+                                    let nanosec = timestamp_op1[timestamp_op1.len() - 3..timestamp_op1.len()].parse::<u32>().unwrap();
+                                    let utc_time_comment = chrono::DateTime::<chrono::Utc>::from_utc(NaiveDateTime::from_timestamp(seconds, nanosec), chrono::Utc);
+                                    let discord_message = ChannelId(channel_id)
+                                    .send_message(&ctx, |m| {
+                                        m.embed(|e| {
+                                            e.title(update.nyaa_torrent.title.clone())
+                                            .color(Color::BLITZ_BLUE)
+                                            .thumbnail(nyaa_comment.gravatar.clone().replace("amp;", ""))
+                                            .author(|a| {
+                                                a.name("Found in this feed!")
+                                                .url(nyaa_url.clone())
+                                            })
+                                            .description("A new comment!")
+                                            .fields(vec![
+                                                (nyaa_comment.user.clone() + ":", nyaa_comment.message.clone(), false),
+                                            ])
+                                            .footer(|f| {
+                                                f.text("Uploaded at")
+                                            })
+                                            .timestamp(utc_time_comment)
+                                        }).components(|c| {
+                                            c.create_action_row(|r| {
+                                                r.create_button(|b| {
+                                                    b.label("Nyaa.si")
+                                                    .url(update.nyaa_torrent.torrent_file.replace("download", "view").strip_suffix(".torrent").unwrap())
+                                                    .style(serenity::model::prelude::component::ButtonStyle::Link)
+                                                })
+                                            })
+                                        })
+                                    }).await;
+                                    if let Err(w) = discord_message {
+                                        eprintln!("Failed to create message: {:?}", w)
+                                    };
+                                };
+                            }
                         }
                     }
                 }
@@ -271,7 +273,7 @@ impl EventHandler for Handler {
 async fn main() {
     let default_config = ConfigFile {
         main: Main {
-            nyaa_url: "https://nyaa.si/user/neoborn".to_string(),
+            nyaa_url: ["https://nyaa.si/user/neoborn".to_string()].to_vec(),
             complete_result: false,
             update_delay: 500
         },
@@ -319,14 +321,20 @@ async fn main() {
     let config_clone = config_file.clone();
     if config_file.discord_bot.enabled {
         tokio::spawn(async move {
-            discord_bot(&config_clone).await.unwrap();
+            loop {
+                if discord_bot(&config_clone).await.is_err() {
+                    println!("Failed to start discord bot, trying again.")
+                };
+            }
         }).await.unwrap();
     } else if config_file.gotfiy.enabled || config_file.smtp.enabled {
         tokio::spawn(async move {
             loop {
                 println!("Checking at: {}", chrono::Local::now());
-                let updates = &nyaa_check(&config_clone).await;
-                send_notification(&config_clone, updates).await.unwrap();
+                for nyaa_url in &config_clone.main.nyaa_url {
+                    let updates = &nyaa_check(&config_clone, &nyaa_url).await;
+                    send_notification(&config_clone, updates).await.unwrap();
+                };
                 thread::sleep(Duration::from_secs(config_clone.main.update_delay));
             }
         }).await.expect("Thread failed to run.");
@@ -334,8 +342,10 @@ async fn main() {
         println!("No notification service has been activated. I will index all torrents without sending any notifications.");
         tokio::spawn(async move {
             println!("Checking at: {}", chrono::Local::now());
-            let updates = &nyaa_check(&config_clone).await;
-            send_notification(&config_clone, updates).await.unwrap();
+            for nyaa_url in &config_clone.main.nyaa_url {
+                let updates = &nyaa_check(&config_clone, &nyaa_url).await;
+                send_notification(&config_clone, updates).await.unwrap();
+            };
             println!("Done.")
         }).await.expect("Thread failed to run.");
         exit(0x0100);
@@ -343,9 +353,9 @@ async fn main() {
 }
 
 
-async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
+async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String) -> Vec<Update> {
     let mut updates: Vec<Update> = [].to_vec();
-    let mut nyaa_page_res = get_nyaa(&config_file.main.nyaa_url);
+    let mut nyaa_page_res = get_nyaa(&nyaa_url);
     if nyaa_page_res.is_err() {
         println!("Web requests are failing.");
         return updates
@@ -357,11 +367,11 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
         match serizalize_user_page(&nyaa_page) {
             Ok(page) => {
                 page_array.append(&mut [page.clone()].to_vec());
-                if page.incomplete && config_file.main.complete_result || page.incomplete && config_file.main.nyaa_url.contains('?') {
+                if page.incomplete && config_file.main.complete_result || page.incomplete && nyaa_url.contains('?') {
                     println!("Waiting 2 seconds");
                     tokio::time::sleep(Duration::from_secs(2)).await;
-                    nyaa_page_res = get_nyaa(&format!("{}{}{}", &config_file.main.nyaa_url,
-                    if config_file.main.nyaa_url.contains('?') {
+                    nyaa_page_res = get_nyaa(&format!("{}{}{}", &nyaa_url,
+                    if nyaa_url.contains('?') {
                         "&p="
                     } else {
                         "?p="
@@ -393,7 +403,7 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
     for page in page_array {
         for torrent in page.torrents {
             if ! torrent_file_links.contains(&torrent.torrent_file) {
-                let nyaa_comments: Vec<NyaaComment> = if torrent.comments > 0 &&
+                let nyaa_comments_res: Result<Vec<NyaaComment>, ()> = if torrent.comments > 0 &&
                     (config_file.discord_bot.enabled && config_file.discord_bot.comment_notifications ||
                     config_file.smtp.enabled && config_file.smtp.comment_notifications ||
                     config_file.gotfiy.enabled && config_file.gotfiy.comment_notifications) {
@@ -401,8 +411,12 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
                     tokio::time::sleep(Duration::from_secs(2)).await;
                     get_nyaa_comments(&torrent)
                 } else {
-                    [].to_vec()
+                    Ok([].to_vec())
                 };
+                if nyaa_comments_res.is_err() {
+                    continue
+                }
+                let nyaa_comments = nyaa_comments_res.unwrap();
                 updates.append(&mut [Update {
                     nyaa_comments,
                     new_comments: torrent.comments,
@@ -415,7 +429,11 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
                 if database_match.comments < torrent.comments {
                     println!("I found a new comment.");
                     let amount_new_comments = torrent.comments - database_match.comments;
-                    let nyaa_comments = get_nyaa_comments(&torrent);
+                    let nyaa_comments_res = get_nyaa_comments(&torrent);
+                    if nyaa_comments_res.is_err() {
+                        continue
+                    }
+                    let nyaa_comments = nyaa_comments_res.unwrap();
                     updates.append(&mut [Update {
                         nyaa_comments,
                         new_comments: amount_new_comments,
@@ -435,12 +453,17 @@ async fn nyaa_check(config_file: &ConfigFile) -> Vec<Update> {
 }
 
 
-fn get_nyaa_comments(torrent: &NyaaTorrent) -> Vec<NyaaComment> {
+fn get_nyaa_comments(torrent: &NyaaTorrent) -> Result<Vec<NyaaComment>, ()> {
     let url = &torrent.torrent_file.trim_end_matches(".torrent").replace("download", "view");
-    let nyaa_page = get_nyaa(url).expect("Connection for nyaa failed.");
+    let nyaa_page_res = get_nyaa(url);
+    if nyaa_page_res.is_err() {
+        println!("Web requests are failing.");
+        return Err(());
+    };
+    let nyaa_page = nyaa_page_res.unwrap();
     match serizalize_torrent_page(&nyaa_page) {
         Ok(update) => {
-            update
+            Ok(update)
         },
         Err(e) => {
             panic!("Serizalization failed on comments. {}", e)
@@ -553,11 +576,15 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
                         .body(html.clone()),
                     ),
             ).expect("Failed to create message");
-            let mail = AsyncSmtpTransport::<Tokio1Executor>::relay(&config_file.smtp.smtp_address)?
-                .credentials(smtp_creds)
-            .build();
-            mail.send(email).await?;
-            println!("A new email has been sent.");
+            let mail_transport = AsyncSmtpTransport::<Tokio1Executor>::relay(&config_file.smtp.smtp_address);
+            if mail_transport.is_ok() {
+                let mail = mail_transport.unwrap().credentials(smtp_creds).build();
+                if mail.send(email).await.is_err() {
+                    println!("Failed to send message");
+                    continue
+                };
+                println!("A new email has been sent.");
+            }
         };
         if config_file.gotfiy.enabled {
             if update.new_torrent {
@@ -566,8 +593,11 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
                     "priority": config_file.gotfiy.comment_priority,
                     "title": update.nyaa_torrent.title,
                 });
-                send_gotify(config_file, post_request).expect("Gotify message could not be sent!");
-                println!("Sent a gotify message.");
+                if send_gotify(config_file, post_request).is_err() {
+                    println!("Failed to send a gotify message.");
+                } else {
+                    println!("Sent a gotify message.");
+                }
             };
             if update.new_comments > 0 && config_file.gotfiy.comment_notifications {
                 for comment_index in update.nyaa_comments.len() as u64 - update.new_comments..update.nyaa_comments.len() as u64 {
@@ -577,8 +607,11 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
                         "priority": config_file.gotfiy.comment_priority,
                         "title": update.nyaa_torrent.title,
                     });
-                    send_gotify(config_file, post_request).expect("Gotify message could not be sent!");
-                    println!("Sent a gotify message.");
+                    if send_gotify(config_file, post_request).is_err() {
+                        println!("Failed to send a gotify message.");
+                    } else {
+                        println!("Sent a gotify message.");
+                    }
                 }
             }
         };
@@ -587,22 +620,31 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
 }
 
 
-fn send_gotify(config_file: &ConfigFile, json: serde_json::Value) -> Result<(), isahc::Error> {
+fn send_gotify(config_file: &ConfigFile, json: serde_json::Value) -> Result<(), ()> {
     let json_string = serde_json::to_string_pretty(&json).unwrap();
-    Request::post(config_file.gotfiy.domain.clone() + "/message?token=" + config_file.gotfiy.token.as_str())
+    let message = Request::post(config_file.gotfiy.domain.clone() + "/message?token=" + config_file.gotfiy.token.as_str())
     .header("accept", "application/json")
     .header("Content-Type", "application/json")
     .timeout(Duration::from_secs(10))
-    .body(json_string)?.send()?;
-    Ok(())
+    .body(json_string);
+    if message.is_ok() {
+        if message.unwrap().send().is_ok() {
+            return Ok(());
+        }
+    }
+    Err(())
 }
 
 
-fn get_nyaa(nyaa_url: &String) -> Result<String, error::Error> {
+fn get_nyaa(nyaa_url: &String) -> Result<String, ()> {
     println!("Requesting: {}", nyaa_url);
-    let mut get_response = Request::get(nyaa_url)
+    let sending_request = Request::get(nyaa_url)
         .timeout(Duration::from_secs(10))
-        .body(()).expect("Failed to create request.").send().expect("Sending request");
+        .body(()).expect("Failed to create request.").send();
+    if sending_request.is_err() {
+        return Err(());
+    }
+    let mut get_response = sending_request.unwrap();
     let response = match get_response.status() {
         StatusCode::OK => {
             Ok(get_response.text().unwrap())
