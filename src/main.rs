@@ -153,7 +153,7 @@ struct Handler {
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-        ctx.set_activity(Activity::watching("the darknet.")).await;
+        ctx.set_activity(Activity::watching("japanese cats.")).await;
         let config_clone = self.config_clone.clone();
         tokio::spawn(async move {
             loop {
@@ -184,9 +184,6 @@ impl EventHandler for Handler {
                                             ("Category", update.nyaa_torrent.category.clone(), false),
                                             ("Size", update.nyaa_torrent.size.clone(), false)
                                         ])
-                                        .footer(|f| {
-                                            f.text("Uploaded at")
-                                        })
                                         .timestamp(utc_time)
                                     }).components(|c| {
                                         c.create_action_row(|r| {
@@ -240,15 +237,17 @@ impl EventHandler for Handler {
                                             .fields(vec![
                                                 (nyaa_comment.user.clone() + ":", nyaa_comment.message.clone(), false),
                                             ])
-                                            .footer(|f| {
-                                                f.text("Uploaded at")
-                                            })
                                             .timestamp(utc_time_comment)
                                         }).components(|c| {
                                             c.create_action_row(|r| {
                                                 r.create_button(|b| {
                                                     b.label("Nyaa.si")
                                                     .url(update.nyaa_torrent.torrent_file.replace("download", "view").strip_suffix(".torrent").unwrap())
+                                                    .style(serenity::model::prelude::component::ButtonStyle::Link)
+                                                })
+                                                .create_button(|b| {
+                                                    b.label(nyaa_comment.user.clone())
+                                                    .url(format!("https://nyaa.si/user/{}", nyaa_comment.user.clone()))
                                                     .style(serenity::model::prelude::component::ButtonStyle::Link)
                                                 })
                                             })
@@ -380,7 +379,7 @@ async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String) -> Vec<Update> 
                     if nyaa_page_res.is_err() {
                         println!("Web requests are failing.");
                         tokio::time::sleep(Duration::from_secs(20)).await;
-                        continue
+                        return vec![];
                     }
                     nyaa_page = nyaa_page_res.unwrap();
                     page_number += 1;
@@ -647,11 +646,16 @@ fn get_nyaa(nyaa_url: &String) -> Result<String, ()> {
     let mut get_response = sending_request.unwrap();
     let response = match get_response.status() {
         StatusCode::OK => {
-            Ok(get_response.text().unwrap())
+            match get_response.text() {
+                Ok(yay) => yay,
+                Err(_) => {
+                    return Err(())
+                }
+            }
         },
         _ => {
-            Err(get_response)
+            return Err(())
         }
     };
-    Ok(response.unwrap())
+    Ok(response)
 }
