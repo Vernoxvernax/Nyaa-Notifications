@@ -1,7 +1,7 @@
 use crate::{NyaaTorrent, Update};
 
 
-pub async fn updates_to_database(updates: &Vec<Update>) -> Result<(), sqlx::Error> {
+pub async fn updates_to_database(updates: &[Update]) -> Result<(), sqlx::Error> {
     let database = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(2)
         .connect_with(
@@ -9,7 +9,7 @@ pub async fn updates_to_database(updates: &Vec<Update>) -> Result<(), sqlx::Erro
                 .filename("./data/nyaa-notifs.sqlite")
                 .create_if_missing(true),
     ).await.unwrap();
-    for update in updates.clone() {
+    for update in updates.iter().cloned() {
         let comments = update.nyaa_torrent.comments as i64;
         let seeders = update.nyaa_torrent.seeders as i64;
         let leechers = update.nyaa_torrent.leechers as i64;
@@ -54,12 +54,13 @@ pub async fn get_database() -> Result<Vec<NyaaTorrent>, sqlx::Error> {
             seeders: row.Seeders.unwrap() as u64,
             leechers: row.Leechers.unwrap() as u64,
             completed: row.Completed.unwrap() as u64,
-            timestamp: row.Timestamp.unwrap() as u64
+            timestamp: row.Timestamp.unwrap() as u64,
+            uploader_avatar: None
         } ).collect();
         database.close().await;
-        return Ok(rows);
+        Ok(rows)
     } else {
         database.close().await;
-        return Ok([].to_vec());
+        Ok([].to_vec())
     }
 }

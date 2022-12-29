@@ -1,7 +1,7 @@
 use crate::{NyaaComment, NyaaPage, NyaaTorrent};
 
 
-pub fn serizalize_torrent_page(website: &String) -> Result<Vec<NyaaComment>, String> {
+pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String> {
     if ! website.starts_with(&"<!DOCTYPE html>".to_string()) {
         return Err("This is not plaintext html code!".to_string())
     };
@@ -24,30 +24,16 @@ pub fn serizalize_torrent_page(website: &String) -> Result<Vec<NyaaComment>, Str
     let mut comments: Vec<NyaaComment> = [].to_vec();
     let mut body_iterator = body.iter();
     let mut torrent_page_end: bool = false;
-    loop {
-        let x = match body_iterator.next() {
-            Some(lime) => {
-                lime.trim()
-            },
-            None => {
-                break
-            }
-        };
+    while let Some(line) = body_iterator.next() {
+        let x = line.trim();
         if ! torrent_page_end && x.contains("comments") {
             let mut user = String::new();
             let mut gravatar = String::new();
             let mut text = String::new();
             let mut timestamp: String = String::new();
             let mut time_str: String = String::new();
-        loop {
-            let x = match body_iterator.next() {
-                Some(lime) => {
-                    lime.trim()
-                },
-                None => {
-                    break
-                }
-            };
+        for line in body_iterator.by_ref() {
+            let x = line.trim();
             if x.contains("data-timestamp=") {
                 let iterator = x.chars();
                 for ch in iterator {
@@ -104,6 +90,48 @@ pub fn serizalize_torrent_page(website: &String) -> Result<Vec<NyaaComment>, Str
                         text.push_str(ch.to_string().as_str());
                     }
                 };
+                if text.contains("![](") {
+                    let mut remove_these: Vec<(usize, usize, usize)> = vec![];
+
+                    let mut exclamation: bool = false;
+                    let mut open_sq_br: bool = false;
+                    let mut closed_sq_br: bool = false;
+                    let mut open_ro_br: bool = false;
+                    let mut values = (0, 0, 0);
+                    for (index, ch) in text.chars().enumerate() {
+                        if ch == '!' {
+                            values.0 = index;
+                            exclamation = true;
+                        } else if ch == '[' && exclamation {
+                            open_sq_br = true;
+                        } else if ch == ']' && open_sq_br && exclamation {
+                            closed_sq_br = true;
+                        } else if ch == '(' && closed_sq_br && open_sq_br && exclamation {
+                            values.1 = index;
+                            open_ro_br = true;
+                        } else if ch == ')' && open_ro_br {
+                            exclamation = false;
+                            open_sq_br = false;
+                            closed_sq_br = false;
+                            open_ro_br = false;
+                            values.2 = index;
+                            remove_these.append(&mut vec![(values)]);
+                        } else if ! open_ro_br {
+                            exclamation = false;
+                            open_sq_br = false;
+                            closed_sq_br = false;
+                            open_ro_br = false;
+                        }
+                    };
+                    for (start, mid, end) in remove_these.iter().rev() {
+                        text.remove(*end);
+                        if *start != 0 {
+                            text = text[0..*start-1].to_string() + &text[*mid+1..text.len()];
+                        } else {
+                            text = text[*mid+1..text.len()].to_string();
+                        }
+                    }
+                }
                 let html = format!(r#"<div class="panel panel-default comment-panel" id="com-1">
                         <div class="panel-body">
                             <div class="col-md-2">
@@ -146,7 +174,7 @@ pub fn serizalize_torrent_page(website: &String) -> Result<Vec<NyaaComment>, Str
 }
 
 
-pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
+pub fn serizalize_user_page(website: &str) -> Result<NyaaPage, String> {
     if ! website.starts_with(&"<!DOCTYPE html>".to_string()) {
         return Err("This is not plaintext html code!".to_string())
     };
@@ -174,15 +202,8 @@ pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
     let mut torrents: Vec<NyaaTorrent> = [].to_vec();
     let mut incomplete: bool = false;
     if website.contains("Browsing <span class=\"") {
-        loop {
-            let x = match body_iterator.next() {
-                Some(lime) => {
-                    lime.trim()
-                },
-                None => {
-                    break
-                }
-            };
+        while let Some(line) = body_iterator.next() {
+            let x = line.trim();
             if x.contains("Browsing <span class=\"") {
                 let mut text = x.trim();
                 text = text.strip_prefix(r#"Browsing <span class="text-default" data-toggle="tooltip" title="User">"#).unwrap();
@@ -194,15 +215,8 @@ pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
             }
         };
     };
-    loop {
-        let x = match body_iterator.next() {
-            Some(lime) => {
-                lime.trim()
-            },
-            None => {
-                break
-            }
-        };
+    while let Some(line) = body_iterator.next() {
+        let x = line.trim();
         if ! torrent_list_end && x == "<tbody>" {
             let mut category: String = String::new();
             let mut comments: String = String::new();
@@ -217,15 +231,8 @@ pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
             let mut temp: String = String::new();
             let mut timestamp: String = String::new();
             let mut comments_found: bool = false;
-            loop {
-                let x = match body_iterator.next() {
-                    Some(lime) => {
-                        lime.trim()
-                    },
-                    None => {
-                        break
-                    }
-                };
+            for line in body_iterator.by_ref() {
+                let x = line.trim();
                 // Gathering category string
                 if x.contains(r#"class="category-icon""#) {
                     let category_iterator = x.chars();
@@ -325,7 +332,8 @@ pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
                                     seeders: seeders.parse::<u64>().unwrap(),
                                     leechers: leechers.parse::<u64>().unwrap(),
                                     completed: completed.parse::<u64>().unwrap(),
-                                    timestamp: timestamp.parse::<u64>().unwrap()
+                                    timestamp: timestamp.parse::<u64>().unwrap(),
+                                    uploader_avatar: None
                                 }].to_vec());
                                 category = String::new();
                                 comments = String::new();
@@ -370,4 +378,79 @@ pub fn serizalize_user_page(website: &String) -> Result<NyaaPage, String> {
         torrents,
         incomplete
     })
+}
+
+pub fn get_uploader_avatar(html: String) -> String {
+    if ! html.starts_with(&"<!DOCTYPE html>".to_string()) {
+        return "".to_string();
+    };
+    let lines = html.split('\n');
+    let mut worthy_text = "";
+    
+    for line in lines.clone() {
+        if line.contains(r#"<meta property="og:image" content=""#) {
+            worthy_text = line;
+            break
+        } else if line.trim() == "</html>" {
+            return "".to_string();
+        }
+    };
+    
+    let mut avatar: String = String::new();
+    for ch in worthy_text.chars() {
+        if ch == '"' {
+            break
+        }
+        avatar.push(ch);
+    }
+
+    avatar
+}
+
+pub fn get_uploader_name(html: String) -> Option<String> {
+    if ! html.starts_with(&"<!DOCTYPE html>".to_string()) {
+        return None;
+    };
+    let lines = html.split('\n');
+    let mut worthy_text = "";
+    
+    for line in lines.clone() {
+        if line.contains(r#"<meta property="og:description" content=""#) {
+            worthy_text = line;
+            break
+        } else if line.trim() == "</html>" {
+            return None;
+        }
+    };
+    
+    let mut name: String = String::new();
+    let mut stage1: bool = false;
+    let mut record: bool = false;
+    let mut seperator: u8 = 0;
+    for ch in worthy_text.chars() {
+        if ch == '|' {
+            if seperator == 2 {
+                stage1 = true;
+            } else {
+                seperator += seperator;
+            }
+            continue;
+        };
+        if ch == ' ' && stage1 {
+            if seperator == 5 {
+                record = true;
+            } else if seperator == 6 {
+                break;
+            } else {
+                seperator += seperator;
+            }
+        };
+        if record {
+            name.push(ch);
+        };
+    }
+    if name == "Anonymous" {
+        return None;
+    }
+    Some(name)
 }
