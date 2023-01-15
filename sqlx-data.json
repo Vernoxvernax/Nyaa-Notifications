@@ -1,5 +1,67 @@
 {
   "db": "SQLite",
+  "081dfdf28ab067034cbc80fe8105fca51124d1db9446282c7e8e426c241bdd1f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "activated",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "comments",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "releases",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "channel_id",
+          "ordinal": 3,
+          "type_info": "Int64"
+        },
+        {
+          "name": "urls",
+          "ordinal": 4,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT * FROM FRONT"
+  },
+  "0c63cfa40737ab6696c659cdf6c672d7a0ae004f6b6642bc094293525d4aa2d6": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "DELETE FROM FRONT WHERE channel_id=?"
+  },
+  "0e3d95114cb3809601f7c6716850c4081db1cd455b4ab117e25129c32249c607": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 5
+      }
+    },
+    "query": "INSERT INTO FRONT (activated, releases, comments, channel_id, urls) VALUES(?1, ?2, ?3, ?4, ?5)"
+  },
   "180823bc2240d852547538c642379a36e09e8d7094a1d70a5b8613d3bb9d0dbd": {
     "describe": {
       "columns": [],
@@ -85,5 +147,15 @@
       }
     },
     "query": "SELECT * FROM Main"
+  },
+  "3ded2174058a711f06e601ab1a29d921ebcdf6478895487ea4dffc8e60115d39": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "UPDATE FRONT SET activated=? WHERE channel_id=?"
   }
 }

@@ -1,6 +1,7 @@
-* Attempt to fix multiple threads spawning when the discord bot reconnects
-* Discord: If comments are too long, the message will be split and sent in different parts
-* Discord: Removed "A new comment!" message for less bloat
-* Discord: New releases messages now feature the actual uploaders gravatar instead of nyaa's default one.
-* Comments in general: Markdown image embeds are now being stripped to only the url. f.e. `![](http://images.com/i.jpg)` -> `http://images.com/i.jpg`
-* Cleaned up code a little bit
+* Finally fixed the running loop when the bot gets reconnected
+* Multiple discord server support
+    * Check out `/help` to for setup.
+    * Make sure the bot has permissions to read/write messages
+    * Only administrators have permissions to access the commands
+
+##### slash commands are easy, no need for poise ha

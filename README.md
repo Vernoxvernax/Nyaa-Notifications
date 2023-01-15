@@ -28,11 +28,11 @@ ___
 * If the input url contains search patterns (aside from "newest"), the script will download all pages to find a new release. This can get your ip **banned** if you input the wrong url. (`complete_result = false`: limits everything to the first page)
 
 #### Config notes:
-* To add multiple discord-notification channels, you can just continue the `channel_id` list.
-* On the first run, I'd highly suggest you to keep all notification services deactivated, so you don't get spammed with outdated news.
+* Discord channels can be configured seperately through the slash command framework
+* On the first run, I'd highly suggest you to keep gotify&smtp notification services deactivated, so you don't get spammed with outdated news.
 
 #### Misc:
-* All web-requests are executed two seconds from each other.
+* All web-requests are executed two seconds from each other. (hopefully)
 
 ___
 

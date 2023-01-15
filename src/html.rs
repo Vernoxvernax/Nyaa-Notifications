@@ -174,7 +174,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
 }
 
 
-pub fn serizalize_user_page(website: &str) -> Result<NyaaPage, String> {
+pub fn serizalize_search_page(website: &str) -> Result<NyaaPage, String> {
     if ! website.starts_with(&"<!DOCTYPE html>".to_string()) {
         return Err("This is not plaintext html code!".to_string())
     };
@@ -195,7 +195,6 @@ pub fn serizalize_user_page(website: &str) -> Result<NyaaPage, String> {
     for line in lines.collect::<Vec<&str>>().split_at(worthy_text).1 {
         body.append(&mut [line.to_string()].to_vec());
     };
-    let mut user = String::from("None");
     let mut torrent_count = 0;
     let mut body_iterator = body.iter();
     let mut torrent_list_end: bool = false;
@@ -205,10 +204,6 @@ pub fn serizalize_user_page(website: &str) -> Result<NyaaPage, String> {
         while let Some(line) = body_iterator.next() {
             let x = line.trim();
             if x.contains("Browsing <span class=\"") {
-                let mut text = x.trim();
-                text = text.strip_prefix(r#"Browsing <span class="text-default" data-toggle="tooltip" title="User">"#).unwrap();
-                text = text.strip_suffix(r#"</span>'s torrents"#).unwrap();
-                user = text.to_string();
                 let x = body_iterator.next().unwrap();
                 torrent_count = x.trim()[1..x.trim().len() - 1].parse::<u64>().unwrap();
                 break
@@ -373,7 +368,6 @@ pub fn serizalize_user_page(website: &str) -> Result<NyaaPage, String> {
         }
     }
     Ok(NyaaPage {
-        user,
         torrent_count,
         torrents,
         incomplete
@@ -397,13 +391,19 @@ pub fn get_uploader_avatar(html: String) -> String {
     };
     
     let mut avatar: String = String::new();
+    let mut delim = 0;
     for ch in worthy_text.chars() {
         if ch == '"' {
-            break
+            if delim == 3 {
+                continue;
+            }
+            delim += 1;
+            continue;
         }
-        avatar.push(ch);
+        if delim == 3 && ch != '>' {
+            avatar.push(ch);
+        }
     }
-
     avatar
 }
 
@@ -429,20 +429,22 @@ pub fn get_uploader_name(html: String) -> Option<String> {
     let mut seperator: u8 = 0;
     for ch in worthy_text.chars() {
         if ch == '|' {
-            if seperator == 2 {
+            if seperator == 1 {
                 stage1 = true;
             } else {
-                seperator += seperator;
+                seperator += 1;
             }
             continue;
         };
         if ch == ' ' && stage1 {
-            if seperator == 5 {
+            if seperator == 3 && ! record {
                 record = true;
-            } else if seperator == 6 {
+                continue;
+            } else if seperator == 3 && record {
                 break;
             } else {
-                seperator += seperator;
+                seperator += 1;
+                continue;
             }
         };
         if record {
