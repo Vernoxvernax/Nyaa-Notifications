@@ -62,16 +62,6 @@
     },
     "query": "INSERT INTO FRONT (activated, releases, comments, channel_id, urls) VALUES(?1, ?2, ?3, ?4, ?5)"
   },
-  "180823bc2240d852547538c642379a36e09e8d7094a1d70a5b8613d3bb9d0dbd": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 9
-      }
-    },
-    "query": "INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) \n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
-  },
   "2bccad2576c16cc6a81c8081a8acf3608cc61f70347de86ec249a441b11ffaa3": {
     "describe": {
       "columns": [],
@@ -157,5 +147,15 @@
       }
     },
     "query": "UPDATE FRONT SET activated=? WHERE channel_id=?"
+  },
+  "c3c8c8d5f1b005801d9299b01b103c6dc29104d5c593e4cc0f93dc1cc412bb2b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 9
+      }
+    },
+    "query": "INSERT INTO MAIN (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) \n        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
   }
 }
