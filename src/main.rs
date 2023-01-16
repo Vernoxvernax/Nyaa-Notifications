@@ -201,7 +201,7 @@ impl EventHandler for Handler {
         }).await.unwrap();
         let config_clone = self.config_clone.clone();
         let ctx = Arc::new(ctx);
-        if self.running_loop.load(Ordering::Relaxed) {
+        if !self.running_loop.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
             tokio::spawn(async move {
                 println!("Starting Loop");
