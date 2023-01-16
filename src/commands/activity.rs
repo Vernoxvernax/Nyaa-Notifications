@@ -16,7 +16,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         .default_member_permissions(Permissions::ADMINISTRATOR)
         .create_option(|option| {
             option
-                .name("listens to")
+                .name("listening")
                 .description("listening to what")
                 .kind(CommandOptionType::String)
                 .min_length(2)

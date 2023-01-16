@@ -1,10 +1,10 @@
 ## **Nyaa-Notifications**
 
-*stalk your favourite uploaders and don't miss the drama in the comments*
+*stalk your favorite uploaders and don't miss the drama in the comments*
 
 ___
 
-As the rss feed from nyaa doesn't provide comments and anything after the first page, I had to basically strip down the html to retrieve the data I want. Meaning: any changes to nyaa will likely brick this application and make it completely useless... until I fix it.
+As the RSS feed from nyaa doesn't provide comments and anything after the first page, I had to basically strip down the HTML to retrieve the data I want. Meaning: any changes to nyaa will likely brick this application and make it completely useless... until I fix it.
 
 ___
 
@@ -17,7 +17,7 @@ ___
 ![](https://i.imgur.com/9UzbkyP.png)
 
 **Notes:**
-- The avatar images of users aren't locally parsed. They are attached using their original gravatar.com link from nyaa. This might be an issue for privacy concerend individuals.
+- The avatar images of users aren't locally parsed. They are attached using their original gravatar.com link from nyaa. This might be an issue for privacy concerned individuals.
 
 ___
 
@@ -25,10 +25,10 @@ ___
 
 #### Requirements for input domain:
 * Must start at page 1.
-* If the input url contains search patterns (aside from "newest"), the script will download all pages to find a new release. This can get your ip **banned** if you input the wrong url. (`complete_result = false`: limits everything to the first page)
+* If the input URL contains search patterns (aside from "newest"), the script will download all pages to find a new release. This can get your IP **banned** if you input the wrong URL. (`complete_result = false`: limits everything to the first page)
 
 #### Config notes:
-* Discord channels can be configured seperately through the slash command framework
+* Discord channels can be configured separately through the slash command framework
 * On the first run, I'd highly suggest you to keep gotify&smtp notification services deactivated, so you don't get spammed with outdated news.
 
 #### Misc:
