@@ -32,6 +32,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
             let mut text = String::new();
             let mut timestamp: String = String::new();
             let mut time_str: String = String::new();
+            let mut link: String = String::new();
         for line in body_iterator.by_ref() {
             let x = line.trim();
             if x.contains("data-timestamp=") {
@@ -63,21 +64,37 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
                 if ! time_str.is_empty() {
                     continue;
                 }
+                let mut record: bool = false;
                 let mut a_tag: bool = false;
                 let mut small_tag: bool = false;
-                let mut now: bool = false;
                 let characters = x.chars();
                 for ch in characters {
-                    if ch == '>' && ! a_tag {
-                        a_tag = true;
-                    } else if ch == '>' && ! small_tag {
-                        small_tag = true;
-                        time_str.clear()
-                    } else if ch == '<' && now {
-                        break
-                    } else if small_tag {
-                        time_str.push_str(ch.to_string().as_str());
-                        now = true;
+                    if ch == '<' {
+                        if a_tag {
+                            small_tag = true;
+                        } else {
+                            a_tag = true;
+                        }
+                        continue;
+                    } else if ch == '"' && ! small_tag && ! record {
+                        record = true;
+                        continue;
+                    } else if ch == '"' && a_tag && ! record {
+                        record = true;
+                        continue;
+                    } else if ch == '"' && record {
+                        if small_tag {
+                            break;
+                        }
+                        record = false;
+                        continue;
+                    }
+                    if record {
+                        if small_tag {
+                            time_str.push_str(ch.to_string().as_str());
+                        } else {
+                            link.push_str(ch.to_string().as_str());
+                        }
                     }
                 }
             } else if x.contains(r#"comment-content"#) {
@@ -154,6 +171,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
                         </div>"#,
                         user, user, gravatar.clone(), user, time_str, text.trim_end_matches(r#"</div"#));
                 comments.append(&mut [NyaaComment {
+                    link: link.clone(),
                     html,
                     user: user.clone(),
                     message: html_escape::decode_html_entities(text.trim_end_matches(r#"</div"#)).to_string(),
@@ -165,6 +183,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
                 time_str = String::new();
                 timestamp = String::new();
                 gravatar = String::new();
+                link = String::new();
                 }
             };
         torrent_page_end = true;
@@ -319,7 +338,7 @@ pub fn serizalize_search_page(website: &str) -> Result<NyaaPage, String> {
                                 torrents.append(&mut [NyaaTorrent {
                                     category: category.clone(),
                                     title: title.clone(),
-                                    comments: comments.parse::<u64>().unwrap(),
+                                    comment_amount: comments.parse::<u64>().unwrap(),
                                     magnet: magnet.clone(),
                                     torrent_file: "https://nyaa.si".to_owned() + &torrent_file,
                                     size: size.clone(),
@@ -328,7 +347,8 @@ pub fn serizalize_search_page(website: &str) -> Result<NyaaPage, String> {
                                     leechers: leechers.parse::<u64>().unwrap(),
                                     completed: completed.parse::<u64>().unwrap(),
                                     timestamp: timestamp.parse::<u64>().unwrap(),
-                                    uploader_avatar: None
+                                    uploader_avatar: None,
+                                    comments: None
                                 }].to_vec());
                                 category = String::new();
                                 comments = String::new();

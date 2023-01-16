@@ -10,7 +10,7 @@ pub async fn updates_to_main_database(updates: &[Update]) -> Result<(), sqlx::Er
                 .create_if_missing(true),
     ).await.unwrap();
     for update in updates.iter().cloned() {
-        let comments = update.nyaa_torrent.comments as i64;
+        let comments = update.nyaa_torrent.comment_amount as i64;
         let seeders = update.nyaa_torrent.seeders as i64;
         let leechers = update.nyaa_torrent.leechers as i64;
         let completed = update.nyaa_torrent.completed as i64;
@@ -46,7 +46,7 @@ pub async fn get_main_database() -> Result<Vec<NyaaTorrent>, sqlx::Error> {
         let rows: Vec<NyaaTorrent> = sqlx::query!("SELECT * FROM Main").fetch_all(&database).await.unwrap().iter().map(|row| NyaaTorrent {
             title: row.Title.clone(),
             category: row.Category.as_ref().unwrap().to_string(),
-            comments: row.Comments.unwrap() as u64,
+            comment_amount: row.Comments.unwrap() as u64,
             size: "NULL".to_string(),
             torrent_file: row.Torrent_File.clone(),
             magnet: row.Magnet.clone(),
@@ -55,7 +55,8 @@ pub async fn get_main_database() -> Result<Vec<NyaaTorrent>, sqlx::Error> {
             leechers: row.Leechers.unwrap() as u64,
             completed: row.Completed.unwrap() as u64,
             timestamp: row.Timestamp.unwrap() as u64,
-            uploader_avatar: None
+            uploader_avatar: None,
+            comments: None
         } ).collect();
         database.close().await;
         Ok(rows)
@@ -191,10 +192,11 @@ pub async fn get_channel_database(channel_id: i64) -> Result<Vec<NyaaTorrent>, s
             date: "NULL".to_string(),
             uploader_avatar: None,
             seeders: seeders as u64,
-            comments: comments as u64,
+            comment_amount: comments as u64,
             leechers: leechers as u64,
             completed: completed as u64,
-            timestamp: timestamp as u64
+            timestamp: timestamp as u64,
+            comments: None
         };
         torrents.append(&mut vec![torrent]);
     }
@@ -210,7 +212,7 @@ pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<()
                 .create_if_missing(true),
     ).await.unwrap();
     for update in updates.iter().cloned() {
-        let comments = update.nyaa_torrent.comments as i64;
+        let comment_amount = update.nyaa_torrent.comment_amount as i64;
         let seeders = update.nyaa_torrent.seeders as i64;
         let leechers = update.nyaa_torrent.leechers as i64;
         let completed = update.nyaa_torrent.completed as i64;
@@ -218,12 +220,12 @@ pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<()
         if update.new_torrent {
             sqlx::query(format!("INSERT INTO _{} (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) 
             VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
-            channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comments, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
+            channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comment_amount, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
             seeders, leechers, completed, timestamp).as_str()
             ).execute(&database).await.expect("insert error");
         } else {
             sqlx::query(format!("UPDATE _{} SET Category={:?}, Title={:?}, Comments={:?}, Seeders={:?}, Leechers={:?}, Completed={:?} WHERE Torrent_File={:?}",
-            channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comments, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
+            channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comment_amount, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
             ).execute(&database).await.expect("insert error");
         }
     };
