@@ -124,7 +124,7 @@ pub async fn get_discord_channels() -> Result<Vec<DiscordChannel>, sqlx::Error> 
     .connect_with(
       sqlx::sqlite::SqliteConnectOptions::new()
         .filename("./data/nyaa-notifs.sqlite")
-        .create_if_missing(true),
+        .create_if_missing(false),
   ).await.unwrap();
   let channels: Vec<DiscordChannel> = sqlx::query!("SELECT * FROM FRONT").fetch_all(&database).await.unwrap().iter().map(|record| DiscordChannel {
     activated: record.activated.clone().unwrap() == "true",
@@ -202,6 +202,12 @@ pub async fn get_channel_database(channel_id: i64) -> Result<Vec<NyaaTorrent>, s
   Ok(torrents)
 }
 
+fn encode(str: String) -> String {
+  let mut encoded = str.replace("\"", "\"\"");
+  encoded = encoded.replace("\'", "\'\'");
+  encoded
+}
+
 pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<(), sqlx::Error> {
   let database = sqlx::sqlite::SqlitePoolOptions::new()
     .max_connections(2)
@@ -218,8 +224,8 @@ pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<()
     let timestamp = update.nyaa_torrent.timestamp as i64;
     if update.new_torrent {
       sqlx::query(format!("INSERT INTO _{} (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) 
-      VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
-      channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comment_amount, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
+      VALUES ({:?}, \"{}\", {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
+      channel_id, update.nyaa_torrent.category, encode(update.nyaa_torrent.title), comment_amount, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
       seeders, leechers, completed, timestamp).as_str()
       ).execute(&database).await.expect("insert error");
     } else {

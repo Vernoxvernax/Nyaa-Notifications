@@ -1,4 +1,4 @@
-* Channel dependent commands now have their own option to select the channel
-  * so that the user can control the bot from anywhere
-* default option for URLs and more discrete description
-* rare version bump
+* Fixed database creation mess (sorry got confused with paths)
+* Implemented simple cache logic for the discord bot; the same URLs won't be fetched more than once now
+* A little more verbose printing in the discord loop
+* Fixed bug where strings containing `'` and `&` couldn't be inserted into the database

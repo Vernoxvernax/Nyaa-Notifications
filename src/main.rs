@@ -75,6 +75,13 @@ pub struct Update {
 }
 
 
+#[derive(Debug, Clone)]
+pub struct CachedUpdate {
+  pub nyaa_url: String,
+  pub updates: Vec<Update>
+}
+
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct ConfigFile {
   main: Main,
@@ -208,6 +215,7 @@ impl EventHandler for Handler {
         println!("Starting Loop");
         loop {
           println!("Checking at: {}", chrono::Local::now());
+          let mut update_cache: Vec<CachedUpdate> = vec![];
           let channels = get_discord_channels().await.unwrap();
           for channel in channels {
             if channel.activated {
@@ -217,15 +225,43 @@ impl EventHandler for Handler {
                   continue;
                 }
                 if database.is_empty() {
-                  let mut edited_config = config_clone.clone();
-                  edited_config.gotfiy.comment_notifications = false;
-                  edited_config.smtp.comment_notifications = false;
-                  edited_config.discord_bot.enabled = false;
-                  let updates = nyaa_check(&edited_config, &url, database.clone(), false).await;
+                  let mut updates: Vec<Update> = vec![];
+                  for mut update in update_cache.clone() {
+                    if update.nyaa_url == url {
+                      updates.append(&mut update.updates);
+                      println!("Found update in cache for {:?}.", url);
+                    }
+                  }
+                  if updates.is_empty() {
+                    let mut edited_config = config_clone.clone();
+                    edited_config.gotfiy.comment_notifications = false;
+                    edited_config.smtp.comment_notifications = false;
+                    edited_config.discord_bot.enabled = false;
+                    updates = nyaa_check(&edited_config, &url, database.clone(), false).await;
+                    update_cache.append(&mut vec![CachedUpdate {
+                      nyaa_url: url,
+                      updates: updates.clone()
+                    }]);
+                  }
                   update_channel_db(channel.channel_id, &updates).await.unwrap();
                   continue;
                 }
-                let updates = nyaa_check(&config_clone, &url, database.clone(), true).await;
+                let mut cached: bool = false;
+                let mut updates: Vec<Update> = vec![];
+                for mut update in update_cache.clone() {
+                  if update.nyaa_url == url {
+                    updates.append(&mut update.updates);
+                    println!("Found update in cache for {:?}.", url);
+                    cached = true;
+                  }
+                }
+                if updates.is_empty() && ! cached {
+                  updates = nyaa_check(&config_clone, &url, database.clone(), true).await;
+                  update_cache.append(&mut vec![CachedUpdate {
+                    nyaa_url: url,
+                    updates: updates.clone()
+                  }]);
+                }
                 if updates.is_empty() {
                   println!("NO UPDATES");
                 } else {
@@ -389,6 +425,7 @@ impl EventHandler for Handler {
                   update_channel_db(channel.channel_id, &updates).await.unwrap();
                 }
               }
+              println!("Completed update check for {:?}", channel.channel_id);
             }
           }
           for nyaa_url in config_clone.clone().main.nyaa_url {
@@ -403,7 +440,7 @@ impl EventHandler for Handler {
               }
             };
           }
-          println!("Finished update-check.");
+          println!("Finished all update-checks.");
           tokio::time::sleep(Duration::from_secs(config_clone.main.update_delay)).await;
         }
       });
@@ -462,7 +499,7 @@ async fn main() {
   .max_connections(5)
   .connect_with(
     sqlx::sqlite::SqliteConnectOptions::new()
-    .filename("nyaa-notifs.sqlite")
+    .filename("./data/nyaa-notifs.sqlite")
     .create_if_missing(true),
   ).await.expect("Couldn't connect to database");
   sqlx::migrate!("./migrations").run(&database).await.expect("Couldn't run database migrations");
@@ -487,12 +524,7 @@ async fn main() {
           if updates.is_empty() {
             println!("NO UPDATES");
           } else {
-            // updates_to_main_database(updates).await.unwrap();
           }
-          // for update in updates {
-          // 	println!("{:?}", update);
-          // }
-          // send_notification(&config_clone, updates).await.unwrap();
         };
         thread::sleep(Duration::from_secs(config_clone.main.update_delay));
       }

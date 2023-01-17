@@ -1,6 +1,6 @@
 [package]
 name = "nyaa-notifs"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 description = "Utility to monitor entries found on the popular torrent page nyaa.si"
 authors = ["Vernoxvernax"]
