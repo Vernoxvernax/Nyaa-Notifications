@@ -1,7 +1,12 @@
 [package]
 name = "nyaa-notifs"
-version = "0.1.7"
+version = "0.1.10"
 edition = "2021"
+description = "Utility to monitor entries found on the popular torrent page nyaa.si"
+authors = ["Vernoxvernax"]
+readme = "README.md"
+repository = "https://github.com/Vernoxvernax/Nyaa-Notifications"
+license = "MIT"
 
 [dependencies]
 isahc = "1.7.2"

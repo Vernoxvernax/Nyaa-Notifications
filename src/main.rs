@@ -161,12 +161,12 @@ struct Handler {
 impl EventHandler for Handler {
   async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
     if let Interaction::ApplicationCommand(command) = interaction {
-      // println!("Received command interaction: {:#?}", command);
+      // println!("Received command interaction: {:#?}", command); // uncomment if you want to monitor all commands being answered by the bot
       let content = match command.data.name.as_str() {
         "help" => commands::help::run(&command.data.options),
-        "create" => commands::create::run(&command.data.options, command.channel_id).await,
-        "reset" => commands::reset::run(&command.data.options, command.channel_id).await,
-        "pause" => commands::pause_unpause::run(&command.data.options, command.channel_id).await,
+        "create" => commands::create::run(&command.data.options).await,
+        "reset" => commands::reset::run(&command.data.options).await,
+        "pause" => commands::pause_unpause::run(&command.data.options).await,
         "activity" => commands::activity::run(&command.data.options, &ctx).await,
         _ => "not implemented :(".to_string(),
       };
