@@ -212,7 +212,7 @@ impl EventHandler for Handler {
     if !self.running_loop.load(Ordering::Relaxed) {
       let ctx1 = Arc::clone(&ctx);
       tokio::spawn(async move {
-        println!("Starting Loop");
+        println!("Starting Discord-Loop");
         loop {
           println!("Checking at: {}", chrono::Local::now());
           let mut update_cache: Vec<CachedUpdate> = vec![];
@@ -435,8 +435,8 @@ impl EventHandler for Handler {
               if updates.is_empty() {
                 println!("NO UPDATES");
               } else {
-                updates_to_main_database(&updates).await.unwrap();
                 send_notification(&config_clone, &updates).await.unwrap();
+                updates_to_main_database(&updates).await.unwrap();
               }
             };
           }
@@ -524,6 +524,8 @@ async fn main() {
           if updates.is_empty() {
             println!("NO UPDATES");
           } else {
+            send_notification(&config_clone, updates).await.unwrap();
+            updates_to_main_database(updates).await.unwrap();
           }
         };
         thread::sleep(Duration::from_secs(config_clone.main.update_delay));

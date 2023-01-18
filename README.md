@@ -29,7 +29,7 @@ ___
 
 #### Config notes:
 * Discord channels can be configured separately through the slash command framework
-* On the first run, I'd highly suggest you to keep gotify&smtp notification services deactivated, so you don't get spammed with outdated news.
+* On the first run, I'd highly suggest you to keep Gotify&SMTP notification services deactivated, so you don't get spammed with outdated news.
 
 #### Misc:
 * All web-requests are executed two seconds from each other. (hopefully)
