@@ -724,6 +724,8 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
         a.new_release {text-align: center !important;font-size: 20px;}
         </style>
       </head><body>"#);
+      let encoded_title: &mut String = &mut String::new();
+      html_escape::encode_unquoted_attribute_to_string(update.nyaa_torrent.title.clone(), encoded_title);
       if update.new_torrent {
         html.push_str(format!(
           r#"<div class="panel panel-default info-panel new_release">
@@ -737,7 +739,7 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
           </div>
           <div class="panel panel-default comments">"#,
           update.nyaa_torrent.torrent_file.trim_end_matches(".torrent").replace("download", "view"),
-          update.nyaa_torrent.title,
+          encoded_title,
           update.nyaa_torrent.category,
           update.nyaa_torrent.date,
           update.nyaa_torrent.size,
@@ -761,7 +763,7 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
           </div>
           <div class="panel panel-default comments">"#,
           update.nyaa_torrent.torrent_file.trim_end_matches(".torrent").replace("download", "view"),
-          update.nyaa_torrent.title,
+          encoded_title,
           update.nyaa_torrent.category,
           update.nyaa_torrent.date,
           update.nyaa_torrent.size
