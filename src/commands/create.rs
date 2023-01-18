@@ -42,11 +42,10 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
     .create_option(|option| {
       option
         .name("url")
-        .description("Nyaa URL separated by `,`")
+        .description("Nyaa URL separated by `,` (f.e.: `https://nyaa.si/user/neoborn, https://nyaa.si/user/djatom`)")
         .kind(CommandOptionType::String)
         .min_length(5)
         .required(true)
-        .add_string_choice("neoborn", "https://nyaa.si/user/neoborn")
     })
     .create_option(|option| {
       option
