@@ -606,8 +606,6 @@ async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String, database: Vec<N
         (config_file.discord_bot.enabled ||
         config_file.smtp.enabled && config_file.smtp.comment_notifications ||
         config_file.gotfiy.enabled && config_file.gotfiy.comment_notifications) {
-          println!("Waiting 2 seconds");
-          tokio::time::sleep(Duration::from_secs(2)).await;
           get_nyaa_comments(&torrent).await
         } else {
           Ok([].to_vec())
@@ -617,6 +615,8 @@ async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String, database: Vec<N
         };
         torrent.comments = Some(nyaa_comments_res.unwrap());
         if discord {
+          println!("Waiting 2 seconds");
+          tokio::time::sleep(Duration::from_secs(2)).await;
           let torrent_page_unv = get_nyaa(&torrent.torrent_file.replace("download", "view").trim_end_matches(".torrent").to_string());
           if let Ok(torrent_page) = torrent_page_unv {
             let uploader: Option<String> = get_uploader_name(torrent_page); // This time as an option, since anonymous uploades
@@ -663,12 +663,12 @@ async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String, database: Vec<N
 
 async fn get_nyaa_comments(torrent: &NyaaTorrent) -> Result<Vec<NyaaComment>, ()> {
   let url = &torrent.torrent_file.trim_end_matches(".torrent").replace("download", "view");
-  let nyaa_page_res = get_nyaa(url);
   println!("Waiting 2 seconds");
   tokio::time::sleep(Duration::from_secs(2)).await;
+  let nyaa_page_res = get_nyaa(url);
   if nyaa_page_res.is_err() {
-  println!("Web requests are failing.");
-  return Err(());
+    println!("Web requests are failing.");
+    return Err(());
   };
   let nyaa_page = nyaa_page_res.unwrap();
   match serizalize_torrent_page(&nyaa_page) {

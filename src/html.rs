@@ -46,7 +46,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
           }
         }
       };
-      if x.contains(r#"<a class="text-default" href="/user/"#) {
+      if x.contains(r#"<a class="text-default" href="/user/"#) || x.contains(r#"<a class="text-success" href="/user/"#) {
         let characters = x.chars();
         for ch in characters {
           if ch == '>' {
@@ -66,33 +66,35 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
         let mut record: bool = false;
         let mut a_tag: bool = false;
         let mut small_tag: bool = false;
+        let mut rec_time_str: bool = false;
         let characters = x.chars();
         for ch in characters {
           if ch == '<' {
             if a_tag {
               small_tag = true;
+            } else if rec_time_str {
+              break;
             } else {
               a_tag = true;
             }
             continue;
-          } else if ch == '"' && ! small_tag && ! record {
-            record = true;
-            continue;
-          } else if ch == '"' && a_tag && ! record {
+          } else if ch == '"' && ! record {
             record = true;
             continue;
           } else if ch == '"' && record {
-            if small_tag {
-              break;
-            }
             record = false;
             continue;
+          } else if ch == '>' && small_tag {
+            rec_time_str = true;
+            record = true;
           }
           if record {
             if small_tag {
-              time_str.push_str(ch.to_string().as_str());
-            } else {
+              continue;
+            } else if a_tag {
               link.push_str(ch.to_string().as_str());
+            } else if rec_time_str {
+              time_str.push_str(ch.to_string().as_str());
             }
           }
         }
@@ -106,46 +108,48 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
             text.push_str(ch.to_string().as_str());
           }
         };
-        if text.contains("![](") {
-          let mut remove_these: Vec<(usize, usize, usize)> = vec![];
-
+        if (text.contains("![](") || text.contains("![") && text.contains("](")) && text.contains(")") {
+          let mut remove_these: Vec<(usize, usize, usize, usize, usize)> = vec![];
           let mut exclamation: bool = false;
           let mut open_sq_br: bool = false;
           let mut closed_sq_br: bool = false;
           let mut open_ro_br: bool = false;
-          let mut values = (0, 0, 0);
-          for (index, ch) in text.chars().enumerate() {
+          let mut values = (0, 0, 0, 0, 0);
+          
+          for (index, ch) in text.char_indices() {
             if ch == '!' {
               values.0 = index;
               exclamation = true;
             } else if ch == '[' && exclamation {
               open_sq_br = true;
+              values.1 = index;
             } else if ch == ']' && open_sq_br && exclamation {
               closed_sq_br = true;
+              values.2 = index;
             } else if ch == '(' && closed_sq_br && open_sq_br && exclamation {
-              values.1 = index;
+              values.3 = index;
               open_ro_br = true;
             } else if ch == ')' && open_ro_br {
               exclamation = false;
               open_sq_br = false;
               closed_sq_br = false;
               open_ro_br = false;
-              values.2 = index;
+              values.4 = index;
               remove_these.append(&mut vec![(values)]);
-            } else if ! open_ro_br {
+            } else if ! (open_ro_br || open_sq_br) {
               exclamation = false;
               open_sq_br = false;
               closed_sq_br = false;
               open_ro_br = false;
             }
           };
-          for (start, mid, end) in remove_these.iter().rev() {
+
+          for (excl, start, mid, start2, end) in remove_these.iter().rev() {
             text.remove(*end);
-            if *start != 0 {
-              text = text[0..*start-1].to_string() + &text[*mid+1..text.len()];
-            } else {
-              text = text[*mid+1..text.len()].to_string();
-            }
+            text.remove(*start2);
+            text.remove(*mid);
+            text.remove(*start);
+            text.remove(*excl);
           }
         }
         let html = format!(r#"<div class="panel panel-default comment-panel" id="com-1">
