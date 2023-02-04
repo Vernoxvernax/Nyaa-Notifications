@@ -671,7 +671,7 @@ async fn get_nyaa_comments(torrent: &NyaaTorrent) -> Result<Vec<NyaaComment>, ()
     return Err(());
   };
   let nyaa_page = nyaa_page_res.unwrap();
-  match serizalize_torrent_page(&nyaa_page) {
+  match serizalize_torrent_page(&nyaa_page, url.to_string()) {
   Ok(update) => {
     Ok(update)
   },

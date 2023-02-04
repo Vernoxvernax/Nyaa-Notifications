@@ -1,4 +1,1 @@
-* Fixed image markdown stripping
-* Fixed comment username extraction for trusted users (green)
-* Fixed timestamp information for SMTP
-* Removed unused dependencies
+* Activated timestamp information for SMTP, and link now points to comment instead of the user

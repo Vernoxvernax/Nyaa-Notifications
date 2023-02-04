@@ -1,6 +1,6 @@
 use crate::{NyaaComment, NyaaPage, NyaaTorrent};
 
-pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String> {
+pub fn serizalize_torrent_page(website: &str, page_url: String) -> Result<Vec<NyaaComment>, String> {
   if ! website.starts_with(&"<!DOCTYPE html>".to_string()) {
     return Err("This is not plaintext html code!".to_string())
   };
@@ -71,6 +71,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
         for ch in characters {
           if ch == '<' {
             if a_tag {
+              a_tag = false;
               small_tag = true;
             } else if rec_time_str {
               break;
@@ -86,7 +87,9 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
             continue;
           } else if ch == '>' && small_tag {
             rec_time_str = true;
+            small_tag = false;
             record = true;
+            continue;
           }
           if record {
             if small_tag {
@@ -162,7 +165,7 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
               </div>
               <div class="col-md-10 comment">
                 <div class="row comment-details">
-                  <a href="https://nyaa.si/user/{}"><small data-timestamp-swap>{}</small></a>
+                  <a href="{}{}"><small data-timestamp-swap>{}</small></a>
                   <div class="comment-actions">
                   </div>
                 </div>
@@ -172,7 +175,8 @@ pub fn serizalize_torrent_page(website: &str) -> Result<Vec<NyaaComment>, String
               </div>
             </div>
             </div>"#,
-            user, user, gravatar.clone(), user, time_str, text.trim_end_matches(r#"</div"#));
+        user, user, gravatar.clone(), page_url, link.clone(), time_str, text.trim_end_matches(r#"</div"#));
+        println!("{}", html);
         comments.append(&mut [NyaaComment {
           link: link.clone(),
           html,
