@@ -176,7 +176,6 @@ pub fn serizalize_torrent_page(website: &str, page_url: String) -> Result<Vec<Ny
             </div>
             </div>"#,
         user, user, gravatar.clone(), page_url, link.clone(), time_str, text.trim_end_matches(r#"</div"#));
-        println!("{}", html);
         comments.append(&mut [NyaaComment {
           link: link.clone(),
           html,

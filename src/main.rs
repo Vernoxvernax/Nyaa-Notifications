@@ -265,6 +265,7 @@ impl EventHandler for Handler {
                 if updates.is_empty() {
                   println!("NO UPDATES");
                 } else {
+                  let mut database_updates: Vec<Update> = vec![];
                   for update in updates.clone() {
                     if update.new_torrent && channel.releases {
                       let channel_id = channel.channel_id as u64;
@@ -314,7 +315,9 @@ impl EventHandler for Handler {
                       }).await;
                       if let Err(w) = discord_message {
                         eprintln!("Failed to create message: {:?}", w)
-                      };
+                      } else {
+                        database_updates.append(&mut vec![update.clone()]);
+                      }
                     }
                     if update.new_comments > 0 && channel.comments {
                       let channel_id = channel.channel_id as u64;
@@ -373,7 +376,9 @@ impl EventHandler for Handler {
                           }).await;
                           if let Err(w) = discord_message {
                             eprintln!("Failed to create message: {:?}", w)
-                          };
+                          } else {
+                            database_updates.append(&mut vec![update.clone()]);
+                          }
                         } else {
                           let amount = ((nyaa_comment.user.len() as f64 + nyaa_comment.message.len() as f64) / 500.0).ceil() as u32;
                           let mut comment = nyaa_comment.message.clone();
@@ -418,6 +423,7 @@ impl EventHandler for Handler {
                               comment = comment[500..comment.len()].to_string();
                             }
                           }
+                          database_updates.append(&mut vec![update.clone()]);
                         }
                       };
                     }
