@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::prelude::*;
@@ -262,10 +262,10 @@ impl EventHandler for Handler {
                     updates: updates.clone()
                   }]);
                 }
+                let mut database_updates: Vec<Update> = vec![];
                 if updates.is_empty() {
                   println!("NO UPDATES");
                 } else {
-                  let mut database_updates: Vec<Update> = vec![];
                   for update in updates.clone() {
                     if update.new_torrent && channel.releases {
                       let channel_id = channel.channel_id as u64;
@@ -316,10 +316,20 @@ impl EventHandler for Handler {
                       if let Err(w) = discord_message {
                         eprintln!("Failed to create message: {:?}", w)
                       } else {
-                        database_updates.append(&mut vec![update.clone()]);
+                        if update.new_comments == 0 {
+                          database_updates.append(&mut vec![update.clone()]);
+                        }
                       }
                     }
                     if update.new_comments > 0 && channel.comments {
+                      if update.nyaa_torrent.comments.as_ref().unwrap().len() < update.new_comments as usize {
+                        if update.new_torrent {
+                          let mut copy = update.clone();
+                          copy.nyaa_torrent.comment_amount = 0;
+                          database_updates.append(&mut vec![copy]);
+                        }
+                        continue;
+                      }
                       let channel_id = channel.channel_id as u64;
                       for comment_index in update.nyaa_torrent.comments.as_ref().unwrap().len() as u64 -
                       update.new_comments..update.nyaa_torrent.comments.as_ref().unwrap().len() as u64 {
@@ -428,7 +438,7 @@ impl EventHandler for Handler {
                       };
                     }
                   }
-                  update_channel_db(channel.channel_id, &updates).await.unwrap();
+                  update_channel_db(channel.channel_id, &database_updates).await.unwrap();
                 }
               }
               println!("Completed update check for {:?}", channel.channel_id);
@@ -511,7 +521,7 @@ async fn main() {
   sqlx::migrate!("./migrations").run(&database).await.expect("Couldn't run database migrations");
   database.close().await;
   let config_file = toml::from_str::<ConfigFile>(&fs::read_to_string(Path::new("./data/config.toml")).expect("Failed reading config file.")).expect("Failed to deserialize config file.");
-  let config_clone = config_file.clone();
+  let mut config_clone = config_file.clone();
   if config_file.discord_bot.enabled {
     tokio::spawn(async move {
       loop {
@@ -530,8 +540,8 @@ async fn main() {
           if updates.is_empty() {
             println!("NO UPDATES");
           } else {
-            send_notification(&config_clone, updates).await.unwrap();
-            updates_to_main_database(updates).await.unwrap();
+            let updates_ready = send_notification(&config_clone, updates).await.unwrap();
+            updates_to_main_database(&updates_ready).await.unwrap();
           }
         };
         thread::sleep(Duration::from_secs(config_clone.main.update_delay));
@@ -539,19 +549,21 @@ async fn main() {
     }).await.expect("Thread failed to run.");
   } else {
     println!("No notification service has been activated. I will index all torrents without sending any notifications.");
+    config_clone.gotfiy.comment_notifications = false;
+    config_clone.smtp.comment_notifications = false;
     tokio::spawn(async move {
       println!("Checking at: {}", chrono::Local::now());
       for nyaa_url in &config_clone.main.nyaa_url {
         let database = get_main_database().await.unwrap();
-        let updates = &nyaa_check(&config_clone, nyaa_url, database, false).await;
+        let updates = nyaa_check(&config_clone, nyaa_url, database, false).await;
         if updates.is_empty() {
           println!("NO UPDATES");
         } else {
-          updates_to_main_database(updates).await.unwrap();
+          // send_notification(&config_clone, &updates).await.unwrap();
+          updates_to_main_database(&updates).await.unwrap();
         }
-        send_notification(&config_clone, updates).await.unwrap();
       };
-      println!("Done.")
+      println!("Done.");
     }).await.expect("Thread failed to run.");
     exit(0x0100);
   }
@@ -704,8 +716,10 @@ async fn start_discord_bot(config_file: &ConfigFile) -> Result<(), SerenityError
 }
 
 
-async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> Result<(), Box<dyn std::error::Error>> {
-  for update in updates {
+async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> Result<Vec<Update>, String> {
+  let mut database_updates: Vec<Update> = vec![];
+  let mut updates = updates.clone();
+  for (index, update) in updates.clone().iter().enumerate() {
     if config_file.smtp.enabled {
       let mut html = String::from(r#"<!DOCTYPE html>
         <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -754,6 +768,10 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
           update.nyaa_torrent.torrent_file
         ).as_str());
         if update.new_comments > 0 && config_file.smtp.comment_notifications {
+          if update.nyaa_torrent.comments.as_ref().unwrap().len() < update.new_comments as usize {
+            updates[index].nyaa_torrent.comment_amount = 0;
+            continue;
+          }
           for comment_index in update.nyaa_torrent.comments.clone().unwrap().len() as u64 -
           update.new_comments..update.nyaa_torrent.comments.clone().unwrap().len() as u64 {
             html.push_str(update.nyaa_torrent.comments.clone().unwrap().get(comment_index as usize).unwrap().html.as_str());
@@ -776,16 +794,22 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
           update.nyaa_torrent.date,
           update.nyaa_torrent.size
         ).as_str());
-        for comment_index in update.nyaa_torrent.comments.clone().unwrap().len() as u64 -
-        update.new_comments..update.nyaa_torrent.comments.clone().unwrap().len() as u64 {
-          html.push_str(update.nyaa_torrent.comments.clone().unwrap().get(comment_index as usize).unwrap().html.as_str());
-        };
+        if update.new_comments > 0 && config_file.smtp.comment_notifications {
+          if update.nyaa_torrent.comments.as_ref().unwrap().len() < update.new_comments as usize {
+            updates.remove(index);
+            continue;
+          }
+          for comment_index in update.nyaa_torrent.comments.clone().unwrap().len() as u64 -
+          update.new_comments..update.nyaa_torrent.comments.clone().unwrap().len() as u64 {
+            html.push_str(update.nyaa_torrent.comments.clone().unwrap().get(comment_index as usize).unwrap().html.as_str());
+          };
+        }
       };
       html.push_str(r#"</div></body></html>"#);
       let smtp_creds = Credentials::new(config_file.smtp.smtp_username.clone(), config_file.smtp.smtp_password.clone());
       let email = Message::builder()
-        .from(config_file.smtp.smtp_username.parse()?)
-        .to(config_file.smtp.smtp_receiver.parse()?)
+        .from(config_file.smtp.smtp_username.parse().unwrap())
+        .to(config_file.smtp.smtp_receiver.parse().unwrap())
         .subject(config_file.smtp.smtp_subject.clone())
         .multipart(MultiPart::alternative()
         .singlepart(SinglePart::builder()
@@ -804,6 +828,7 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
           continue
         };
         println!("A new email has been sent.");
+        database_updates.append(&mut vec![update.clone()]);
       }
     };
     if config_file.gotfiy.enabled {
@@ -816,10 +841,21 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
         if send_gotify(config_file, post_request).is_err() {
           println!("Failed to send a gotify message.");
         } else {
+          if update.new_comments == 0 {
+            database_updates.append(&mut vec![update.clone()]);
+          }
           println!("Sent a gotify message.");
         }
       };
       if update.new_comments > 0 && config_file.gotfiy.comment_notifications {
+        if update.nyaa_torrent.comments.as_ref().unwrap().len() < update.new_comments as usize {
+          if update.new_torrent {
+            let mut copy = update.clone();
+            copy.nyaa_torrent.comment_amount = 0;
+            database_updates.append(&mut vec![copy]);
+          }
+          continue;
+        }
         for comment_index in update.nyaa_torrent.comments.clone().unwrap().len() as u64 -
         update.new_comments..update.nyaa_torrent.comments.clone().unwrap().len() as u64 {
           let comments = update.nyaa_torrent.comments.clone().unwrap();
@@ -833,12 +869,13 @@ async fn send_notification(config_file: &ConfigFile, updates: &Vec<Update>) -> R
             println!("Failed to send a gotify message.");
           } else {
             println!("Sent a gotify message.");
+            database_updates.append(&mut vec![update.clone()]);
           }
         }
       }
     };
   };
-  Ok(())
+  Ok(database_updates)
 }
 
 
