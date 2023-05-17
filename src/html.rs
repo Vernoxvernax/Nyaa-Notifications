@@ -59,6 +59,9 @@ pub fn serizalize_torrent_page(website: &str, page_url: String) -> Result<Vec<Ny
         }
       } else if x.starts_with(r#"<img class="avatar" src=""#) {
         gravatar = x.trim_start_matches(r#"<img class="avatar" src=""#).trim_end_matches(r#"" alt="User">"#).to_string();
+        if gravatar == String::from("/static/img/avatar/default.png") {
+          gravatar = String::from("https://nyaa.si")+&gravatar;
+        }
       } else if x.contains(r#"data-timestamp"#) {
         if ! time_str.is_empty() {
           continue;
