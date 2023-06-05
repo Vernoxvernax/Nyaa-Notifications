@@ -230,7 +230,7 @@ pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<()
       ).execute(&database).await.expect("insert error");
     } else {
       sqlx::query(format!(r#"UPDATE _{} SET Category={:?}, Title={:?}, Comments={:?}, Seeders={:?}, Leechers={:?}, Completed={:?} WHERE Torrent_File={:?}"#,
-      channel_id, update.nyaa_torrent.category, update.nyaa_torrent.title, comment_amount, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
+      channel_id, update.nyaa_torrent.category, encode(update.nyaa_torrent.title), comment_amount, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
       ).execute(&database).await.expect("insert error");
     }
   };
