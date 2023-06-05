@@ -657,7 +657,8 @@ async fn nyaa_check(config_file: &ConfigFile, nyaa_url: &String, database: Vec<N
       } else {
         let database_match_opt = database_iterator.clone().find(|&x| x.torrent_file.contains(&torrent.torrent_file));
         let database_match = database_match_opt.unwrap();
-        if database_match.comment_amount < torrent.comment_amount {
+        if database_match.comment_amount < torrent.comment_amount
+        && (config_file.gotfiy.comment_notifications || config_file.discord_bot.enabled || config_file.smtp.comment_notifications) {
           println!("I found a new comment.");
           let amount_new_comments = torrent.comment_amount - database_match.comment_amount;
           let nyaa_comments_res = get_nyaa_comments(&torrent).await;
