@@ -224,14 +224,14 @@ pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<()
     let timestamp = update.nyaa_torrent.timestamp as i64;
     if update.new_torrent {
       sqlx::query(format!(r#"INSERT INTO _{} (Category, Title, Comments, Magnet, Torrent_File, Seeders, Leechers, Completed, Timestamp) 
-      VALUES ({:?}, \"{}\", {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})"#,
-      channel_id, update.nyaa_torrent.category, encode(update.nyaa_torrent.title), comment_amount, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
+      VALUES ({:?}, (?), {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})"#,
+      channel_id, update.nyaa_torrent.category, comment_amount, update.nyaa_torrent.magnet, update.nyaa_torrent.torrent_file, 
       seeders, leechers, completed, timestamp).as_str()
-      ).execute(&database).await.expect("insert error");
+      ).bind(update.nyaa_torrent.title).execute(&database).await.expect("insert error");
     } else {
-      sqlx::query(format!(r#"UPDATE _{} SET Category={:?}, Title=\"{}\", Comments={:?}, Seeders={:?}, Leechers={:?}, Completed={:?} WHERE Torrent_File={:?}"#,
-      channel_id, update.nyaa_torrent.category, encode(update.nyaa_torrent.title), comment_amount, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
-      ).execute(&database).await.expect("insert error");
+      sqlx::query(format!(r#"UPDATE _{} SET Category={:?}, Title=(?), Comments={:?}, Seeders={:?}, Leechers={:?}, Completed={:?} WHERE Torrent_File={:?}"#,
+      channel_id, update.nyaa_torrent.category, comment_amount, seeders, leechers, completed, update.nyaa_torrent.torrent_file).as_str()
+      ).bind(update.nyaa_torrent.title).execute(&database).await.expect("insert error");
     }
   };
   println!("Updated discord database");
