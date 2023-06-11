@@ -202,12 +202,6 @@ pub async fn get_channel_database(channel_id: i64) -> Result<Vec<NyaaTorrent>, s
   Ok(torrents)
 }
 
-fn encode(str: String) -> String {
-  let mut encoded = str.replace("\"", "\"\"");
-  encoded = encoded.replace("\'", "\'\'");
-  encoded
-}
-
 pub async fn update_channel_db(channel_id: i64, updates: &[Update]) -> Result<(), sqlx::Error> {
   let database = sqlx::sqlite::SqlitePoolOptions::new()
     .max_connections(2)

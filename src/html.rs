@@ -433,6 +433,9 @@ pub fn get_uploader_avatar(html: String) -> String {
       avatar.push(ch);
     }
   }
+  if avatar == String::from("/static/img/avatar/default.png") {
+    avatar = String::from("https://nyaa.si")+&avatar;
+  }
   avatar
 }
 
