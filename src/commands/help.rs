@@ -10,8 +10,8 @@ Commands:
   \"help\" - Print this help message
   \"create\" - Setup notifications for the current channel
   \"reset\" - Remove notifications for the current channel
-  \"pause\" - Pause all notifications for this channel
-  \"resume\" - Resume all notifications for this channel```".to_string()
+  \"pause\" - Pause/Resume all notifications for this channel
+  \"activity\" - Change current activity-text of the discord bot```".to_string()
 }
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {

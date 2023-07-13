@@ -85,10 +85,11 @@ impl Web {
 
   pub async fn get_updates(&mut self, module: &ModuleConfig, module_id: &String, database: &mut Database) -> Vec<NyaaUpdate> {
     let mut updates: Vec<NyaaUpdate> = vec![];
+    let mut table_exists: bool = true; // specifically needed for channels with multiple feeds, as everything goes into the same table
     for url in &module.feeds {
       let mut feed = self.search_feed(url, module.retrieve_all_pages);
       // Check if table exist
-      if database.data_table_exists(module.module_type.to_string(), module_id).await {
+      if database.data_table_exists(module.module_type.to_string(), module_id).await && table_exists {
         for torrent in feed.torrents.iter_mut() {
           if let Ok(db_torrent) = database.get_torrent_from_db(module.module_type.to_string(), module_id, torrent.id).await {
             // Torrent is not new
@@ -185,6 +186,8 @@ impl Web {
             new_upload: true,
             torrent: torrent.clone()
           }).await;
+
+          table_exists = false;
         }
       }
       // here put all of it into the cache
@@ -346,7 +349,7 @@ impl Web {
 
     let mut url = if url.contains('?') {
       format!("{}&", url)
-    } else if ! url.ends_with('/') {
+    } else if url.ends_with("nyaa.si") {
       format!("{}/?", url)
     } else {
       format!("{}?", url)

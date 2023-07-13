@@ -74,6 +74,11 @@ impl Config {
               return Err(());
             }
 
+            if config.module.iter().any(|module| module.active && (module.module_type == ModuleType::Discord) && module.discord_token.is_none()) {
+              eprintln!("[ERR] Your discord module doesn't have a discord token set.\nPlease ");
+              return Err(());
+            }
+
             return Ok(Config {
               update_interval: config.update_interval,
               module: config.module
