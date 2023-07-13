@@ -168,7 +168,7 @@ impl Database {
       for row in db {
         let channel_str: String = row.get(0);
         let channel: u64 = channel_str.parse().unwrap();
-        let feed: String = row.get(1);
+        let feeds_string_list: String = row.get(1);
         let active: bool = row.get(2);
         let comments: bool = row.get(3);
         let uploads: bool = row.get(4);
@@ -176,10 +176,12 @@ impl Database {
         let pinged_role_str: String = row.get(6);
         let pinged_role = pinged_role_str.parse::<u64>().unwrap();
 
+        let feeds: Vec<String> = feeds_string_list.split(',').map(|str| str.to_string()).collect();
+
         channels.append(&mut vec![ModuleConfig {
           module_type: ModuleType::Discord,
           active,
-          feeds: vec![feed],
+          feeds,
           comments,
           uploads,
           retrieve_all_pages,

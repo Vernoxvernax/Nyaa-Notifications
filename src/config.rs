@@ -146,7 +146,7 @@ retrieve_all_pages = false  # not used
 
   pub async fn refresh_discord_modules(&mut self, database: &mut Database, discord_bot_id: String) {
     for (index, module) in self.module.clone().iter().enumerate() {
-      if module.active && (module.module_type == ModuleType::Discord) {
+      if module.active && module.discord_token.is_none() && (module.module_type == ModuleType::Discord) {
         self.module.remove(index);
       }
     }

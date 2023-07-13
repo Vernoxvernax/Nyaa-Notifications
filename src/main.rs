@@ -51,14 +51,14 @@ async fn main() -> ExitCode {
     println!("Checking at: {}", chrono::Local::now());
 
     for module in config.module.clone() {
-      if module.active && (module.module_type == ModuleType::Discord) {
+      if module.active && module.discord_token.is_some() && (module.module_type == ModuleType::Discord) {
         config.refresh_discord_modules(&mut database, module.discord_bot_id.unwrap()).await;
         break;
       }
     }
 
     for (index, module) in config.module.iter().enumerate() {
-      if module.active {
+      if module.active && ! module.discord_token.is_some() {
         let id = if module.module_type == ModuleType::Discord {
           module.discord_bot_id.clone().unwrap()+"_"+&module.discord_channel_id.unwrap().to_string()
         } else {
