@@ -1,0 +1,10 @@
+**/*sqlite
+**/config.toml
+Cargo.lock
+*htm
+test
+test.rs
+nyaa_notifications
+target
+.vscode
+

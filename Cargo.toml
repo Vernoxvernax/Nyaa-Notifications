@@ -1,0 +1,23 @@
+[package]
+name = "nyaa-notifications"
+version = "0.2.0"
+edition = "2021"
+description = "Utility to monitor uploads and their comments on the popular site nyaa.si"
+authors = ["DepriSheep"]
+readme = "README.md"
+repository = "https://github.com/Vernoxvernax/Nyaa-Notifications"
+license = "MIT"
+
+[dependencies]
+lettre = { version = "0.10.4", default-features = false, features = ["smtp-transport", "tokio1-rustls-tls", "hostname", "builder"] }
+sqlx = { version = "0.7.0", features = ["runtime-tokio-native-tls", "sqlite"] }
+tokio = { version = "1.29.1", features = ["full"] }
+html-escape = "0.2.13"
+lazy_static = "1.4.0"
+serde = "1.0.171"
+serde_json = "1.0.102"
+toml = "0.7.6"
+chrono = "0.4.26"
+isahc = "1.7.2"
+regex = "1.9.1"
+serenity = "0.11.6"
