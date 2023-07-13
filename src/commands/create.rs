@@ -13,9 +13,9 @@ pub async fn run(options: &[CommandDataOption], discord_bot_id: &String, databas
   let uploads = options.get(2).unwrap().value.as_ref().unwrap().as_bool().unwrap();
   let comments = options.get(3).unwrap().value.as_ref().unwrap().as_bool().unwrap();
   let complete = options.get(4).unwrap().value.as_ref().unwrap().as_bool().unwrap();
-  let pinged_role: String = match &options.get(5).unwrap().value {
-    Some(json) => {
-      json.as_str().unwrap().replace('"', "")
+  let pinged_role: String = match &options.get(5) {
+    Some(arg) => {
+      arg.value.as_ref().unwrap().as_str().unwrap().replace('"', "")
     },
     None => {
       "0".to_string()

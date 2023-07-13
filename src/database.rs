@@ -223,10 +223,6 @@ impl Database {
       let leechers: u64 = row.get_unchecked::<f64, _>(9) as u64;
       let completed: u64 = row.get_unchecked::<f64, _>(10) as u64;
       let comments_amount: u64 = row.get_unchecked::<f64, _>(11) as u64;
-      // let comments_encoded = &row.get::<String, _>(12);
-      // let comments_decoded = html_escape::decode_html_entities(comments_encoded);
-      // println!("{}", comments_encoded);
-      // let comments: Vec<NyaaComment> = serde_json::from_str(&comments_decoded.replace(r#"\\""#, r#"\""#).to_string()).unwrap();
       let comments: Vec<NyaaComment> = serde_json::from_str(&row.get_unchecked::<String, _>(12)).unwrap();
       torrents.append(&mut vec![NyaaTorrent {
         uploader: None,
