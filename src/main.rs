@@ -1,6 +1,7 @@
 use std::{process::ExitCode, thread, time::Duration};
 use database::Database;
 use lazy_static::lazy_static;
+use log::debug;
 
 use web::Web;
 use config::{Config, ModuleType};
@@ -22,6 +23,8 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+  env_logger::init();
+  debug!("Reading configuration.");
   let config_res = Config::new();
   let mut config: Config;
   if config_res.is_err() {
@@ -30,6 +33,7 @@ async fn main() -> ExitCode {
     config = config_res.unwrap();
   };
 
+  debug!("Generating and opening database.");
   let database_res = Database::new();
   let mut database: Database;
   if let Ok(database_) = database_res.await {
@@ -38,6 +42,7 @@ async fn main() -> ExitCode {
     return ExitCode::FAILURE;
   }
 
+  debug!("Initializing notifications class.");
   let notifications_res = Notifications::new(config.module.clone(), &mut database).await;
   let mut notifications: Notifications;
   if let Ok(notifications_) = notifications_res {
@@ -50,6 +55,7 @@ async fn main() -> ExitCode {
     let mut web = Web::default();
     println!("Checking at: {}", chrono::Local::now());
 
+    debug!("Refreshing discord modules.");
     for module in config.module.clone() {
       if module.active && module.discord_token.is_some() && (module.module_type == ModuleType::Discord) {
         config.refresh_discord_modules(&mut database, module.discord_bot_id.unwrap()).await;
@@ -64,8 +70,10 @@ async fn main() -> ExitCode {
         } else {
           index.to_string()
         };
+        debug!("Getting updates from nyaa.");
         let mut updates = web.get_updates(module, &id, &mut database).await;
         updates.reverse();
+        debug!("Sending updates:\n{:?}", updates);
         for update in notifications.process_updates(module, &mut database, updates).await {
           database.update_db_table(module.module_type.to_string(), &id, update).await;
         }

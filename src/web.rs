@@ -94,7 +94,7 @@ impl Web {
           if let Ok(db_torrent) = database.get_torrent_from_db(module.module_type.to_string(), module_id, torrent.id).await {
             // Torrent is not new
             if module.comments.unwrap() && (db_torrent.comments_amount != torrent.comments_amount) {
-              // If the current comment amount is 0 but the db one is not, then don't get the comments again. 
+              // If the current comment amount is 0 but the db one is not, then don't get the comments again.
               if torrent.comments_amount == 0 {
                 let mut update: NyaaTorrent = db_torrent.clone();
                 for comment in update.comments.iter_mut() {
@@ -354,6 +354,7 @@ impl Web {
     } else {
       format!("{}?", url)
     };
+
     url = url.replace("http:", "https:");
 
     if torrents.is_empty() {
@@ -369,7 +370,6 @@ impl Web {
     }
   }
 
-  
   fn get_feed(&mut self, url: &String, complete: bool, skip_first_page: bool) -> Vec<NyaaTorrent> {
     let domain = get_domain(url);
     let mut torrents: Vec<NyaaTorrent> = vec![];
