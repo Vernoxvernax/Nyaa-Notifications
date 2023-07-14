@@ -90,8 +90,9 @@ impl Web {
       let mut feed = self.search_feed(url, module.retrieve_all_pages.unwrap());
       // Check if table exist
       if database.data_table_exists(module.module_type.to_string(), module_id).await && table_exists {
+        let database_torrents = database.get_torrents_from_db(module.module_type.to_string(), module_id).await;
         for torrent in feed.torrents.iter_mut() {
-          if let Ok(db_torrent) = database.get_torrent_from_db(module.module_type.to_string(), module_id, torrent.id).await {
+          if let Some(db_torrent) = database_torrents.iter().find(|t| t.id == torrent.id) {
             // Torrent is not new
             if module.comments.unwrap() && (db_torrent.comments_amount != torrent.comments_amount) {
               // If the current comment amount is 0 but the db one is not, then don't get the comments again.

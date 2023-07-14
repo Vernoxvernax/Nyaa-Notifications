@@ -207,7 +207,7 @@ impl Database {
     channels
   }
 
-  pub async fn get_torrent_from_db(&mut self, database_type: String, database_id: &String, torrent_id: u64) -> Result<NyaaTorrent, ()> {
+  pub async fn get_torrents_from_db(&mut self, database_type: String, database_id: &String) -> Vec<NyaaTorrent> {
     let table_name = format!("_{}_{}", database_type, database_id);
     let db = sqlx::query(format!(r#"SELECT * FROM {:?}"#, table_name).as_str()).fetch_all(&self.database).await.unwrap();
     let mut torrents: Vec<NyaaTorrent> = vec![];
@@ -246,12 +246,6 @@ impl Database {
       }]);
     }
 
-    for torrent in torrents {
-      if torrent.id == torrent_id {
-        return Ok(torrent);
-      }
-    }
-
-    Err(())
+    torrents
   }
 }
