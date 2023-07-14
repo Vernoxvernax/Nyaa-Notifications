@@ -181,10 +181,10 @@ impl Database {
         channels.append(&mut vec![ModuleConfig {
           module_type: ModuleType::Discord,
           active,
-          feeds,
-          comments,
-          uploads,
-          retrieve_all_pages,
+          feeds: Some(feeds),
+          comments: Some(comments),
+          uploads: Some(uploads),
+          retrieve_all_pages: Some(retrieve_all_pages),
           discord_channel_id: Some(channel),
           smtp_username: None,
           smtp_password: None,
@@ -198,7 +198,9 @@ impl Database {
           gotify_upload_priority: None,
           discord_token: None,
           discord_bot_id: Some(discord_bot_id.to_string()),
-          discord_pinged_role: Some(pinged_role)
+          discord_pinged_role: Some(pinged_role),
+          discord_bot_activity_type: None,
+          discord_bot_activity_text: None
         }]);
       }
     }

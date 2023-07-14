@@ -36,10 +36,10 @@ impl std::fmt::Display for ModuleType {
 pub struct ModuleConfig {
   pub module_type: ModuleType,
   pub active: bool,
-  pub feeds: Vec<String>,
-  pub comments: bool,
-  pub uploads: bool,
-  pub retrieve_all_pages: bool,
+  pub feeds: Option<Vec<String>>,
+  pub comments: Option<bool>,
+  pub uploads: Option<bool>,
+  pub retrieve_all_pages: Option<bool>,
   pub smtp_username: Option<String>,
   pub smtp_password: Option<String>,
   pub smtp_domain: Option<String>,
@@ -53,7 +53,9 @@ pub struct ModuleConfig {
   pub discord_token: Option<String>,
   pub discord_bot_id: Option<String>,
   pub discord_channel_id: Option<u64>,
-  pub discord_pinged_role: Option<u64>
+  pub discord_pinged_role: Option<u64>,
+  pub discord_bot_activity_type: Option<String>,
+  pub discord_bot_activity_text: Option<String>
 }
 
 impl Config {
@@ -124,6 +126,8 @@ active = false
 module_type = "Discord"
 discord_token = "<DISCORD-BOT-TOKEN>"
 discord_bot_id = "just something variable to name the database"
+discord_bot_activity_type = "listening"
+discord_bot_activity_text = "spinning hard-drives."
 feeds = []  # not used
 comments = true # not used
 uploads = true  # not used

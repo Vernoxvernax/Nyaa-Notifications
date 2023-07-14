@@ -58,7 +58,7 @@ async fn main() -> ExitCode {
     }
 
     for (index, module) in config.module.iter().enumerate() {
-      if module.active && ! module.discord_token.is_some() {
+      if module.active && module.discord_token.is_none() {
         let id = if module.module_type == ModuleType::Discord {
           module.discord_bot_id.clone().unwrap()+"_"+&module.discord_channel_id.unwrap().to_string()
         } else {

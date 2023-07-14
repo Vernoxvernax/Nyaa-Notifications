@@ -24,7 +24,9 @@ impl Notifications {
         if let Ok(mut client) = Client::builder(token.clone(), intents)
         .event_handler(Handler {
           database_pool: database.database.clone(),
-          discord_bot_id: module.discord_bot_id.unwrap()
+          discord_bot_id: module.discord_bot_id.unwrap(),
+          discord_activity_type: module.discord_bot_activity_type.unwrap(),
+          discord_activity_text: module.discord_bot_activity_text.unwrap()
         }).framework(StandardFramework::new())
         .await {
           http = client.cache_and_http.http.clone();

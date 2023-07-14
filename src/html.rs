@@ -246,7 +246,7 @@ pub fn serialize_torrent(html: &str, page_url: String, domain: &str) -> (Option<
               last_part = part;
             }
           }
-        } else if x.contains(r#"<a class="text-default" href="/user/"#) || x.contains(r#"<a class="text-success" href="/user/"#) {
+        } else if x.contains(r#"href="/user/"#) {
           let characters = x.chars();
           let mut last_part = "";
           for part in x.split('\"') {
@@ -272,7 +272,15 @@ pub fn serialize_torrent(html: &str, page_url: String, domain: &str) -> (Option<
         } else if x.ends_with("(uploader)") {
           uploader = true;
         } else if x.starts_with(r#"<img class="avatar" src=""#) {
-          avatar = x.trim_start_matches(r#"<img class="avatar" src=""#).trim_end_matches(r#"" alt="User">"#).to_string();
+          let mut last_part = "";
+          for part in x.split('"') {
+            if last_part == " src=" {
+              avatar = part.to_string();
+              break;
+            } else {
+              last_part = part;
+            }
+          }
           if avatar.starts_with('/') {
             avatar = short_domain.clone()+&avatar;
           }
@@ -363,7 +371,7 @@ pub fn serialize_torrent(html: &str, page_url: String, domain: &str) -> (Option<
 }
 
 pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
-  if ! html.starts_with(&"<!DOCTYPE html>".to_string()) {
+  if ! html.starts_with("<!DOCTYPE html>") {
     return None;
   };
   let lines = html.split('\n');
@@ -372,12 +380,14 @@ pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
   let mut banned = false;
   let mut submitter_line: bool = false;
   for line in lines {
-    if line.ends_with(r#"<div class="col-md-1">Submitter:</div>"#) {
+    if line.ends_with(r#"<div class="panel panel-success">"#) {
+      role = "Trusted".to_string();
+    } else if line.ends_with(r#"<div class="col-md-1">Submitter:</div>"#) {
       submitter_line = true;
     } else if submitter_line {
       let mut last_part = "";
-      if line.contains("href=\"/user/") {
-        for part in line.split('\"') {
+      if line.contains(r#"href="/user/"#) {
+        for part in line.split('"') {
           if last_part == " title=" {
             role = part.to_string();
             if role.contains("BANNED") {
@@ -386,7 +396,7 @@ pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
             last_part = ">.< -!- >~<";
             continue;
           } else if last_part == ">.< -!- >~<" {
-            uploader = part.trim_start_matches('>').split('<').next().unwrap().to_string();
+            uploader = part.trim_start_matches('>').trim_end_matches("</a>\t\t\t</div>").to_string();
             break;
           } else {
             last_part = part;
@@ -396,11 +406,19 @@ pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
           break;
         }
       }
+    } else if line.contains(r#"<div class="col-md-1">Seeders:</div>"#) {
+      return Some(NyaaUser {
+        anonymous: true,
+        role,
+        username: "Anonymous".to_string(),
+        avatar: None,
+        banned: false
+      });
     }
   }
 
   Some(NyaaUser {
-    anonymous: true,
+    anonymous: false,
     username: uploader,
     role,
     avatar: None,

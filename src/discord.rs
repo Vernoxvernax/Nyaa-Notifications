@@ -12,8 +12,10 @@ use crate::config::ModuleConfig;
 use crate::commands;
 
 pub struct Handler {
+  pub database_pool: Pool<Sqlite>,
   pub discord_bot_id: String,
-  pub database_pool: Pool<Sqlite>
+  pub discord_activity_type: String,
+  pub discord_activity_text: String
 }
 
 #[async_trait]
@@ -44,7 +46,17 @@ impl EventHandler for Handler {
 
   async fn ready(&self, ctx: Context, ready: Ready) {
     println!("[Discord] {} is conntected.", ready.user.name);
-    ctx.set_activity(Activity::listening("asd.")).await;
+    if self.discord_activity_type == "listening" {
+      ctx.set_activity(Activity::listening(&self.discord_activity_text)).await;
+    } else if self.discord_activity_type == "playing" {
+      ctx.set_activity(Activity::playing(&self.discord_activity_text)).await;
+    } else if self.discord_activity_type == "watching" {
+      ctx.set_activity(Activity::watching(&self.discord_activity_text)).await;
+    } else if self.discord_activity_type == "competing" {
+      ctx.set_activity(Activity::competing(&self.discord_activity_text)).await;
+    } else {
+      eprintln!("Activity type not found. Options are: \"playing; watching; competing; listening\".");
+    }
 
     Command::create_global_application_command(&ctx.http, |command| {
       commands::help::register(command)

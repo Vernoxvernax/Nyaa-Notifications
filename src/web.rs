@@ -86,14 +86,14 @@ impl Web {
   pub async fn get_updates(&mut self, module: &ModuleConfig, module_id: &String, database: &mut Database) -> Vec<NyaaUpdate> {
     let mut updates: Vec<NyaaUpdate> = vec![];
     let mut table_exists: bool = true; // specifically needed for channels with multiple feeds, as everything goes into the same table
-    for url in &module.feeds {
-      let mut feed = self.search_feed(url, module.retrieve_all_pages);
+    for url in &module.feeds.clone().unwrap() {
+      let mut feed = self.search_feed(url, module.retrieve_all_pages.unwrap());
       // Check if table exist
       if database.data_table_exists(module.module_type.to_string(), module_id).await && table_exists {
         for torrent in feed.torrents.iter_mut() {
           if let Ok(db_torrent) = database.get_torrent_from_db(module.module_type.to_string(), module_id, torrent.id).await {
             // Torrent is not new
-            if module.comments && (db_torrent.comments_amount != torrent.comments_amount) {
+            if module.comments.unwrap() && (db_torrent.comments_amount != torrent.comments_amount) {
               // If the current comment amount is 0 but the db one is not, then don't get the comments again. 
               if torrent.comments_amount == 0 {
                 let mut update: NyaaTorrent = db_torrent.clone();
@@ -125,7 +125,7 @@ impl Web {
             // Torrent is new
             // a few complicated if statements, because it's possible the torrent is cached
             
-            if ((torrent.comments.is_empty() && torrent.comments_amount != 0) && module.comments) ||
+            if ((torrent.comments.is_empty() && torrent.comments_amount != 0) && module.comments.unwrap()) ||
             (module.module_type == ModuleType::Discord) {
               if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
                 *torrent = full_torrent;
@@ -159,7 +159,7 @@ impl Web {
               }
             }
 
-            if module.uploads {
+            if module.uploads.unwrap() {
               updates.append(&mut vec![NyaaUpdate {
                 new_upload: true,
                 torrent: torrent.clone()
@@ -175,7 +175,7 @@ impl Web {
       } else {
         // index all torrents but not as new torrents
         for torrent in feed.torrents.iter_mut() {
-          if (torrent.comments_amount != 0) && module.comments {
+          if (torrent.comments_amount != 0) && module.comments.unwrap() {
             if let Ok(full_torrent) = self.get_torrent(torrent.to_owned()) {
               torrent.comments = full_torrent.comments;
             }
@@ -193,7 +193,7 @@ impl Web {
       // here put all of it into the cache
       self.cache_pages.append(&mut vec![NyaaPage {
         url: url.to_string(),
-        complete: module.retrieve_all_pages,
+        complete: module.retrieve_all_pages.unwrap(),
         torrents: feed.torrents
       }]);
     }
