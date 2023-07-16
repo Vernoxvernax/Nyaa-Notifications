@@ -226,7 +226,7 @@ pub fn limit_string_length(input: &str, limit: usize) -> String {
 
 async fn send_discord_embed(http: &Arc<Http>, channel: ChannelId, discord_pinged_role: Option<u64>, title: &str, thumbnail: String, fields: Vec<(String, String, bool)>,
 utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, String), button_emojis: (ReactionType, ReactionType)) -> Result<(), ()> {
-  for field in create_embeds(fields) {
+  for field in create_embeds_after_size(fields) {
     let mut embed: &mut CreateEmbed = &mut serenity::builder::CreateEmbed::default();
     embed = embed
       .title(title)
@@ -287,7 +287,7 @@ utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, 
   Ok(())
 }
 
-fn create_embeds(fields: Vec<(String, String, bool)>) -> Vec<Vec<(String, String, bool)>> {
+fn create_embeds_after_size(fields: Vec<(String, String, bool)>) -> Vec<Vec<(String, String, bool)>> {
   let mut max_size = 1010; 
   let mut output: Vec<Vec<(String, String, bool)>> = vec![];
   let single_size = calculate_single_size(fields.clone());

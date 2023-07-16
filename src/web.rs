@@ -11,7 +11,7 @@ pub struct Web {
   pub cache_pages: Vec<NyaaPage>
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct NyaaPage {
   url: String,
   complete: bool,
@@ -334,16 +334,26 @@ impl Web {
     let mut torrents: Vec<NyaaTorrent> = vec![];
     for page in self.cache_pages.clone() {
       if page.url == *url {
-        if page.complete != complete {
-          for torrent in page.torrents {
-            torrents.append(&mut vec![torrent]);
+        if page.complete && ! complete {
+          for page_torrent in page.torrents {
+            if torrents.iter().find(|t| page_torrent.id == t.id).is_none() {
+              torrents.append(&mut vec![page_torrent]);
+            }
             if torrents.len() == 85 {
               break;
             }
           }
+          break;
         } else {
           cache_complete = true;
-          torrents.append(&mut page.torrents.clone());
+          for page_torrent in page.torrents.clone() {
+            if torrents.iter().find(|t| page_torrent.id == t.id).is_none() {
+              torrents.append(&mut vec![page_torrent]);
+            }
+          }
+          if !complete {
+            break;
+          }
         }
       }
     }

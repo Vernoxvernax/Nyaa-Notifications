@@ -128,10 +128,6 @@ discord_token = "<DISCORD-BOT-TOKEN>"
 discord_bot_id = "just something variable to name the database"
 discord_bot_activity_type = "listening"
 discord_bot_activity_text = "spinning hard-drives."
-feeds = []  # not used
-comments = true # not used
-uploads = true  # not used
-retrieve_all_pages = false  # not used
 "#;
 
       if Path::is_dir(Path::new(&NYAA_FOLDER_PATH.to_string())) ||

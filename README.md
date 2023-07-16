@@ -26,13 +26,12 @@ ___
 
 #### Requirements for input domain:
 * Must start at page 1.
-* You have the option to search only the first page, or **ALL** of them. Think wisely as this could end up searching the entire website.
+* You have the option to search only the first page, or **ALL** of them. Think wisely as this could end up downloading the entire website.
 
 #### Config Notes:
 * You can add multiple `Gotify` and `Email` modules as long as you **don't** change the order of the modules if your database has already been created.
 * The `module_type` parameter specifies the behavior of the program, don't change it to something random.
-* For the discord module, some parameters are not used but necessary to provide, just leave them in the file.
-* Discord channels have be configured separately through the slash command framework.
+* Discord channels have to be configured separately through the slash command framework.
 
 #### Misc:
 * Hard-coded rate-limits:
