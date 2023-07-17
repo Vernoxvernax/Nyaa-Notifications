@@ -125,7 +125,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
             if let Err(()) = send_discord_embed(&http,
               channel, module.discord_pinged_role, &title,
               comment.user.avatar.clone().unwrap(),
-              vec![(comment.user.username.clone()+" (deleted comment)", comment.old_message.clone().unwrap(), false)],
+              vec![(comment.user.username.clone()+" (deleted comment)", comment.message.clone(), false)],
               chrono::offset::Utc::now(),
               ("Nyaa.si".to_string(), comment.user.username.clone()),
               (

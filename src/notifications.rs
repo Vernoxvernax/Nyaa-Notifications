@@ -73,9 +73,9 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
   let mut successful_updates: Vec<NyaaUpdate> = vec![];
   for update in updates {
     let title = limit_string_length(&update.torrent.title, 75);
-    if update.new_upload {
-      let mut only_upload = update.torrent.clone();
-      only_upload.comments = vec![];
+    let mut only_upload = update.torrent.clone();
+    only_upload.comments = vec![];
+    if update.new_upload && module.uploads.unwrap(){
       let message = format!("{} | {} | #{}", update.torrent.category, update.torrent.size, update.torrent.id);
       if let Ok(()) = gotify_send_message(module, &title, message, module.gotify_upload_priority.unwrap()).await {
         successful_updates.append(&mut vec![NyaaUpdate {
@@ -85,11 +85,16 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
       } else {
         continue;
       }
+    } else if update.new_upload && ! module.uploads.unwrap() {
+      successful_updates.append(&mut vec![NyaaUpdate {
+        new_upload: true,
+        torrent: only_upload
+      }]);
     }
 
-    if !update.torrent.comments.is_empty() {
-      let mut only_comment_updates = update.torrent.clone();
-      only_comment_updates.comments = vec![];
+    let mut only_comment_updates = update.torrent.clone();
+    only_comment_updates.comments = vec![];
+    if !update.torrent.comments.is_empty() && module.comments.unwrap() {
       for comment in update.torrent.comments {
         match comment.update_type {
           NyaaCommentUpdateType::DELETED => {
@@ -141,6 +146,17 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
         new_upload: false,
         torrent: only_comment_updates
       }]);
+    } else if ! module.comments.unwrap() {
+      for comment in update.torrent.comments.clone() {
+        if comment.update_type == NyaaCommentUpdateType::DELETED {
+          continue;
+        }
+        only_comment_updates.comments.append(&mut vec![comment]);
+      }
+      successful_updates.append(&mut vec![NyaaUpdate {
+        new_upload: false,
+        torrent: only_comment_updates
+      }]);
     }
   }
   Ok(successful_updates)
@@ -180,7 +196,7 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
   for update in updates {
     let mut html = HTML_HEAD.to_string();
     let title = html_escape::encode_quoted_attribute(&update.torrent.title).to_string();
-    if update.new_upload {
+    if update.new_upload && module.uploads.unwrap() {
       html.push_str(format!(
         r#"<div class="panel panel-default info-panel new_release">
         <div style="text-align: center;">
@@ -218,63 +234,65 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
 
     let mut only_comment_updates: NyaaTorrent = update.torrent.clone();
     only_comment_updates.comments = vec![];
-    for comment in update.torrent.comments.clone() {
-      let timestamp: String;
-      let message: String;
-      match comment.update_type {
-        NyaaCommentUpdateType::DELETED => {
-          timestamp = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-          message = comment.message;
-        },
-        NyaaCommentUpdateType::EDITED => {
-          timestamp = chrono::Utc.timestamp_opt(comment.edited_timestamp.unwrap() as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
-          message = comment.message;
-        },
-        NyaaCommentUpdateType::NEW => {
-          timestamp = chrono::Utc.timestamp_opt(comment.date_timestamp as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
-          message = comment.message;
-        },
-        NyaaCommentUpdateType::UNDECIDED => {
-          continue;
+    if module.comments.unwrap() {
+      for comment in update.torrent.comments.clone() {
+        let timestamp: String;
+        let message: String;
+        match comment.update_type {
+          NyaaCommentUpdateType::DELETED => {
+            timestamp = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            message = comment.message;
+          },
+          NyaaCommentUpdateType::EDITED => {
+            timestamp = chrono::Utc.timestamp_opt(comment.edited_timestamp.unwrap() as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
+            message = comment.message;
+          },
+          NyaaCommentUpdateType::NEW => {
+            timestamp = chrono::Utc.timestamp_opt(comment.date_timestamp as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
+            message = comment.message;
+          },
+          NyaaCommentUpdateType::UNDECIDED => {
+            continue;
+          }
         }
-      }
-
-      let text_color = text_color_from_role(comment.user.role);
-      let text_style = if comment.user.banned {
-        " strike"
-      } else {
-        ""
-      };
-
-      html.push_str(format!(
-        r#"<div class="panel panel-default comment-panel" id="com-1">
-        <div class="panel-body">
-          <div class="col-md-2">
-            <p>
-              <a class="text-{}{}" href="{}" data-toggle="tooltip" title="User">{}</a>
-            </p>
-            <img class="avatar" src="{}" alt="User">
-          </div>
-          <div class="col-md-10 comment">
-            <div class="row comment-details">
-              <a href="{}"><small data-timestamp-swap>{}</small></a>
-              <div class="comment-actions">
+  
+        let text_color = text_color_from_role(comment.user.role);
+        let text_style = if comment.user.banned {
+          " strike"
+        } else {
+          ""
+        };
+  
+        html.push_str(format!(
+          r#"<div class="panel panel-default comment-panel" id="com-1">
+          <div class="panel-body">
+            <div class="col-md-2">
+              <p>
+                <a class="text-{}{}" href="{}" data-toggle="tooltip" title="User">{}</a>
+              </p>
+              <img class="avatar" src="{}" alt="User">
+            </div>
+            <div class="col-md-10 comment">
+              <div class="row comment-details">
+                <a href="{}"><small data-timestamp-swap>{}</small></a>
+                <div class="comment-actions">
+                </div>
+              </div>
+              <div class="row comment-body">
+                <div markdown-text class="comment-content" id="comment">{}</div>
               </div>
             </div>
-            <div class="row comment-body">
-              <div markdown-text class="comment-content" id="comment">{}</div>
-            </div>
           </div>
-        </div>
-        </div>"#,
-        text_color, text_style,
-        format!("{}user/{}", update.torrent.domain, comment.user.username.clone()),
-        comment.user.username.clone(),
-        comment.user.avatar.clone().unwrap(),
-        comment.direct_link.clone(),
-        timestamp,
-        message
-      ).as_str());
+          </div>"#,
+          text_color, text_style,
+          format!("{}user/{}", update.torrent.domain, comment.user.username.clone()),
+          comment.user.username.clone(),
+          comment.user.avatar.clone().unwrap(),
+          comment.direct_link.clone(),
+          timestamp,
+          message
+        ).as_str());
+      }
     }
 
     html.push_str(r#"</div></body></html>"#);
