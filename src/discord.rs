@@ -85,9 +85,9 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
   }
   for update in updates {
     let title = limit_string_length(&update.torrent.title, 100);
-    if update.new_upload {
-      let mut only_upload = update.torrent.clone();
-      only_upload.comments = vec![];
+    let mut only_upload = update.torrent.clone();
+    only_upload.comments = vec![];
+    if update.new_upload && module.uploads.unwrap() {
       let utc_time = unix_to_datetime(update.torrent.upload_date_timestamp);
       if let Ok(()) = send_discord_embed(&http,
         channel, module.discord_pinged_role, &title,
@@ -108,11 +108,16 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
       } else {
         continue;
       };
+    } else if update.new_upload && ! module.uploads.unwrap() {
+      successful_updates.append(&mut vec![NyaaUpdate {
+        new_upload: true,
+        torrent: only_upload
+      }]);
     }
 
-    if !update.torrent.comments.is_empty() {
-      let mut only_comment_updates = update.torrent.clone();
-      only_comment_updates.comments = vec![];
+    let mut only_comment_updates = update.torrent.clone();
+    only_comment_updates.comments = vec![];
+    if !update.torrent.comments.is_empty() && module.comments.unwrap() {
       for comment in update.torrent.comments {
         thread::sleep(Duration::from_secs(1));
         match comment.update_type {
@@ -195,6 +200,17 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
             only_comment_updates.comments.append(&mut vec![comment]);
           }
         }
+      }
+      successful_updates.append(&mut vec![NyaaUpdate {
+        new_upload: false,
+        torrent: only_comment_updates
+      }]);
+    } else if ! module.comments.unwrap() {
+      for comment in update.torrent.comments.clone() {
+        if comment.update_type == NyaaCommentUpdateType::DELETED {
+          continue;
+        }
+        only_comment_updates.comments.append(&mut vec![comment]);
       }
       successful_updates.append(&mut vec![NyaaUpdate {
         new_upload: false,

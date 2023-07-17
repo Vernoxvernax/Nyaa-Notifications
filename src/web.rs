@@ -126,8 +126,8 @@ impl Web {
             // Torrent is new
             // a few complicated if statements, because it's possible the torrent is cached
             
-            if ((torrent.comments.is_empty() && torrent.comments_amount != 0) && module.comments.unwrap()) ||
-            (module.module_type == ModuleType::Discord) {
+            if (torrent.comments.is_empty() && torrent.comments_amount != 0) && module.comments.unwrap() ||
+            (module.module_type == ModuleType::Discord && torrent.uploader.is_none()) {
               if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
                 *torrent = full_torrent;
                 for comment in torrent.comments.iter_mut() {
