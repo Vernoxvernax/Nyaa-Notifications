@@ -101,6 +101,7 @@ impl Web {
                 for comment in update.comments.iter_mut() {
                   comment.update_type = NyaaCommentUpdateType::DELETED;
                 }
+                update.comments_amount = 0;
                 updates.append(&mut vec![NyaaUpdate {
                   new_upload: false,
                   torrent: update
@@ -160,17 +161,10 @@ impl Web {
               }
             }
 
-            if module.uploads.unwrap() {
-              updates.append(&mut vec![NyaaUpdate {
-                new_upload: true,
-                torrent: torrent.clone()
-              }]);
-            } else {
-              updates.append(&mut vec![NyaaUpdate {
-                new_upload: false,
-                torrent: torrent.clone()
-              }]);
-            }
+            updates.append(&mut vec![NyaaUpdate {
+              new_upload: true,
+              torrent: torrent.clone()
+            }]);
           }
         }
       } else {
