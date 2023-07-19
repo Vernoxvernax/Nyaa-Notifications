@@ -1,9 +1,10 @@
-use std::{time::Duration, thread};
+use std::{thread, time::Duration};
 use isahc::{prelude::Configurable, RequestExt, http::StatusCode, ReadResponseExt};
 use serde::{Deserialize, Serialize};
 
 use crate::database::Database;
 use crate::config::{ModuleConfig, ModuleType};
+use crate::discord::unix_to_datetime;
 use crate::html::{serialize_feed, serialize_torrent, serialize_user_page};
 
 pub struct Web {
@@ -94,32 +95,53 @@ impl Web {
         for torrent in feed.torrents.iter_mut() {
           if let Some(db_torrent) = database_torrents.iter().find(|t| t.id == torrent.id) {
             // Torrent is not new
-            if module.comments.unwrap() && (db_torrent.comments_amount != torrent.comments_amount) {
-              // If the current comment amount is 0 but the db one is not, then don't get the comments again.
-              if torrent.comments_amount == 0 {
-                let mut update: NyaaTorrent = db_torrent.clone();
-                for comment in update.comments.iter_mut() {
-                  comment.update_type = NyaaCommentUpdateType::DELETED;
-                }
-                update.comments_amount = 0;
-                updates.append(&mut vec![NyaaUpdate {
-                  new_upload: false,
-                  torrent: update
-                }]);
-              } else {
-                if torrent.comments.is_empty() {
-                  if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
-                    *torrent = full_torrent.clone();
+            if module.comments.unwrap() {
+              if db_torrent.comments_amount != torrent.comments_amount {
+                // If the current comment amount is 0 but the db one is not, then don't get the comments again.
+                if torrent.comments_amount == 0 {
+                  let mut update: NyaaTorrent = db_torrent.clone();
+                  for comment in update.comments.iter_mut() {
+                    comment.update_type = NyaaCommentUpdateType::DELETED;
                   }
-                }
-                let mut update: NyaaTorrent = torrent.clone();
-                update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
-                // find new / edited / deleted comments
-                if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
+                  update.comments_amount = 0;
                   updates.append(&mut vec![NyaaUpdate {
                     new_upload: false,
                     torrent: update
                   }]);
+                } else {
+                  if torrent.comments.is_empty() {
+                    if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
+                      *torrent = full_torrent.clone();
+                    }
+                  }
+                  let mut update: NyaaTorrent = torrent.clone();
+                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
+                  // find new / edited / deleted comments
+                  if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
+                    updates.append(&mut vec![NyaaUpdate {
+                      new_upload: false,
+                      torrent: update
+                    }]);
+                  }
+                }
+              } else if db_torrent.comments_amount != 0 {
+                // Check if there is a comment with the "new" type which is more than one hour old.
+                if db_torrent.comments.iter().any(|c| (c.update_type != NyaaCommentUpdateType::UNDECIDED) &&
+                (unix_to_datetime(c.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now())) {
+                  if torrent.comments.is_empty() {
+                    if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
+                      *torrent = full_torrent.clone();
+                    }
+                  }
+                  let mut update: NyaaTorrent = torrent.clone();
+                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
+                  // find new / edited / deleted comments
+                  if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
+                    updates.append(&mut vec![NyaaUpdate {
+                      new_upload: false,
+                      torrent: update
+                    }]);
+                  }
                 }
               }
             }
@@ -266,7 +288,7 @@ impl Web {
         c.user.username == comment.user.username &&
         c.uploader == comment.uploader &&
         c.date_timestamp == comment.date_timestamp
-      }) {  
+      }) {
         update.append(&mut vec![comment]);
       }
     }

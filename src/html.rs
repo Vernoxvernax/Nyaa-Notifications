@@ -236,10 +236,10 @@ pub fn serialize_torrent(html: &str, page_url: String, domain: &str) -> (Option<
               break
             }
           }
-        } else if x.contains(">(edited)</small>") {
+        } else if x.contains(r#">(edited)</small>"#) {
           let mut last_part = "";
           for part in x.split('"') {
-            if last_part == " data-timestamp=" {
+            if last_part.ends_with(" data-timestamp=") {
               edited_timestamp = Some(part.parse::<f64>().unwrap());
               break;
             } else {

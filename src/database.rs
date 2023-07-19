@@ -1,7 +1,8 @@
 use sqlx::{sqlite, Pool, Sqlite, Row};
 
 use crate::NYAA_DATABASE_PATH;
-use crate::web::{NyaaTorrent, NyaaComment, NyaaUpdate};
+use crate::discord::unix_to_datetime;
+use crate::web::{NyaaTorrent, NyaaComment, NyaaUpdate, NyaaCommentUpdateType};
 use crate::config::{ModuleConfig, ModuleType};
 
 pub struct Database {
@@ -55,8 +56,16 @@ impl Database {
     }
   }
 
-  pub async fn update_db_table(&mut self, database_type: String, database_id: &String, update: NyaaUpdate) {
+  pub async fn update_db_table(&mut self, database_type: String, database_id: &String, mut update: NyaaUpdate) {
     let table_name = format!("_{}_{}", database_type, database_id);
+    
+    for comment in update.torrent.comments.iter_mut() {
+      if unix_to_datetime(comment.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now() {
+        comment.update_type = NyaaCommentUpdateType::UNDECIDED;
+      }
+      // Make it so that comments can't be re-checked when they've already aged more than one hour. 
+    }
+
     if update.new_upload {
       sqlx::query(format!(r#"INSERT INTO {:?} (ID, Domain, Title, Category, Size, Magnet_Link, Upload_Date_Str, Upload_Date_Timestamp, Seeders, Leechers, Completed, Comments_Amount, Comments)
         VALUES ({:?}, {:?}, (?), {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, (?))"#,

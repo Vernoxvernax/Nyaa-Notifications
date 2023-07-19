@@ -222,7 +222,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
   Ok(successful_updates)
 }
 
-fn unix_to_datetime(timestamp: f64) -> DateTime<Utc> {
+pub fn unix_to_datetime(timestamp: f64) -> DateTime<Utc> {
   let naive_datetime = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).unwrap();
   DateTime::<Utc>::from_utc(naive_datetime, Utc)
 }
