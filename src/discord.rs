@@ -143,7 +143,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
                 edited_timestamp: comment.edited_timestamp,
                 old_edited_timestamp: comment.old_edited_timestamp,
                 direct_link: comment.direct_link,
-                update_type: NyaaCommentUpdateType::UNDECIDED
+                update_type: NyaaCommentUpdateType::UNCHECKED
               }]);
             };
           },
@@ -175,7 +175,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
                 edited_timestamp: comment.old_edited_timestamp,
                 old_edited_timestamp: None,
                 direct_link: comment.direct_link,
-                update_type: NyaaCommentUpdateType::UNDECIDED
+                update_type: NyaaCommentUpdateType::UNCHECKED
               }]);
             };
           },
@@ -193,10 +193,15 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
               ),
               (ReactionType::Unicode("💬".to_string()), ReactionType::Unicode("🕵️".to_string()))
             ).await {
-              only_comment_updates.comments.append(&mut vec![comment]);
+              let mut finished_comment = comment.clone();
+              finished_comment.update_type = NyaaCommentUpdateType::UNCHECKED;
+              only_comment_updates.comments.append(&mut vec![finished_comment]);
             };
           },
           NyaaCommentUpdateType::UNDECIDED => {
+            only_comment_updates.comments.append(&mut vec![comment]);
+          },
+          NyaaCommentUpdateType::UNCHECKED => {
             only_comment_updates.comments.append(&mut vec![comment]);
           }
         }

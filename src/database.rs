@@ -60,7 +60,7 @@ impl Database {
     let table_name = format!("_{}_{}", database_type, database_id);
     
     for comment in update.torrent.comments.iter_mut() {
-      if unix_to_datetime(comment.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now() {
+      if unix_to_datetime(comment.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now()-chrono::Duration::minutes(1) {
         comment.update_type = NyaaCommentUpdateType::UNDECIDED;
       }
       // Make it so that comments can't be re-checked when they've already aged more than one hour. 

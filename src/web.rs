@@ -64,7 +64,8 @@ pub enum NyaaCommentUpdateType {
   NEW,
   EDITED,
   DELETED,
-  UNDECIDED
+  UNDECIDED,
+  UNCHECKED
 }
 
 #[derive(Debug, Clone)]
@@ -115,9 +116,10 @@ impl Web {
                     }
                   }
                   let mut update: NyaaTorrent = torrent.clone();
-                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
                   // find new / edited / deleted comments
-                  if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
+                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
+                  if update.comments.iter().any(|c| (c.update_type != NyaaCommentUpdateType::UNCHECKED) &&
+                  (c.update_type != NyaaCommentUpdateType::UNDECIDED)) {
                     updates.append(&mut vec![NyaaUpdate {
                       new_upload: false,
                       torrent: update
@@ -126,7 +128,7 @@ impl Web {
                 }
               } else if db_torrent.comments_amount != 0 {
                 // Check if there is a comment with the "new" type which is more than one hour old.
-                if db_torrent.comments.iter().any(|c| (c.update_type != NyaaCommentUpdateType::UNDECIDED) &&
+                if db_torrent.comments.iter().any(|c| (c.update_type == NyaaCommentUpdateType::UNCHECKED) &&
                 (unix_to_datetime(c.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now())) {
                   if torrent.comments.is_empty() {
                     if let Ok(full_torrent) = self.get_torrent(torrent.clone()) {
@@ -134,9 +136,10 @@ impl Web {
                     }
                   }
                   let mut update: NyaaTorrent = torrent.clone();
-                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
                   // find new / edited / deleted comments
-                  if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
+                  update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
+                  if update.comments.iter().any(|c| (c.update_type != NyaaCommentUpdateType::UNCHECKED) &&
+                  (c.update_type != NyaaCommentUpdateType::UNDECIDED)) {
                     updates.append(&mut vec![NyaaUpdate {
                       new_upload: false,
                       torrent: update

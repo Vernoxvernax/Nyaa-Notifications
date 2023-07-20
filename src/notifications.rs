@@ -8,7 +8,7 @@ use serenity::{prelude::GatewayIntents, http::Http, Client, framework::StandardF
 use crate::config::{ModuleConfig, ModuleType};
 use crate::discord::{Handler, discord_send_updates, limit_string_length};
 use crate::database::Database;
-use crate::web::{NyaaUpdate, NyaaCommentUpdateType, NyaaTorrent, NyaaComment};
+use crate::web::{NyaaUpdate, NyaaCommentUpdateType, NyaaComment};
 
 pub struct Notifications {
   http: Option<Arc<Http>>
@@ -109,7 +109,7 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
                 edited_timestamp: comment.edited_timestamp,
                 old_edited_timestamp: comment.old_edited_timestamp,
                 direct_link: comment.direct_link,
-                update_type: NyaaCommentUpdateType::UNDECIDED
+                update_type: NyaaCommentUpdateType::UNCHECKED
               }]);
             };
           },
@@ -127,17 +127,22 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
                 edited_timestamp: comment.old_edited_timestamp,
                 old_edited_timestamp: None,
                 direct_link: comment.direct_link,
-                update_type: NyaaCommentUpdateType::UNDECIDED
+                update_type: NyaaCommentUpdateType::UNCHECKED
               }]);
             };
           },
           NyaaCommentUpdateType::NEW => {
             let message = format!("{} [NEW]: {}", comment.user.username, comment.message);
             if let Ok(()) = gotify_send_message(module, &title, message, module.gotify_comment_priority.unwrap()).await {
-              only_comment_updates.comments.append(&mut vec![comment]);
+              let mut finished_comment = comment.clone();
+              finished_comment.update_type = NyaaCommentUpdateType::UNCHECKED;
+              only_comment_updates.comments.append(&mut vec![finished_comment]);
             };
           },
           NyaaCommentUpdateType::UNDECIDED => {
+            only_comment_updates.comments.append(&mut vec![comment]);
+          },
+          NyaaCommentUpdateType::UNCHECKED => {
             only_comment_updates.comments.append(&mut vec![comment]);
           }
         }
@@ -232,8 +237,6 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
       ).as_str());
     }
 
-    let mut only_comment_updates: NyaaTorrent = update.torrent.clone();
-    only_comment_updates.comments = vec![];
     if module.comments.unwrap() {
       for comment in update.torrent.comments.clone() {
         let timestamp: String;
@@ -252,6 +255,9 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
             message = comment.message;
           },
           NyaaCommentUpdateType::UNDECIDED => {
+            continue;
+          },
+          NyaaCommentUpdateType::UNCHECKED => {
             continue;
           }
         }
@@ -319,7 +325,13 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
           eprintln!("Failed to send message");
           continue
         } else {
-          successful_updates.append(&mut vec![update.clone()]);
+          let mut prepared_update = update.clone();
+          for comment in prepared_update.torrent.comments.iter_mut() {
+            if (comment.update_type != NyaaCommentUpdateType::UNCHECKED) || (comment.update_type != NyaaCommentUpdateType::UNDECIDED) {
+              comment.update_type = NyaaCommentUpdateType::UNCHECKED;
+            }
+          }
+          successful_updates.append(&mut vec![prepared_update]);
         }
       }
     }
