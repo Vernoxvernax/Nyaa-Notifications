@@ -258,20 +258,21 @@ impl Web {
     // edited comment (based on the username, initial timestamp and edited_timestamp) [looking for positive]
     for new_comment in full_torrent.comments.clone() {
       let mut edited: bool = false;
-      for old_torrent in db_torrent.comments.clone() {
+      for old_comment in db_torrent.comments.clone() {
         if (new_comment.edited_timestamp.is_some()) &&
-        (new_comment.user.username == old_torrent.user.username) &&
-        (new_comment.date_timestamp == old_torrent.date_timestamp) &&
-        (new_comment.edited_timestamp != old_torrent.edited_timestamp) {
+        (new_comment.user.username == old_comment.user.username) &&
+        (new_comment.date_timestamp == old_comment.date_timestamp) &&
+        (new_comment.edited_timestamp != old_comment.edited_timestamp) &&
+        (new_comment.message != old_comment.message) {
           edited = true;
           update.append(&mut vec![NyaaComment {
             user: new_comment.user,
             message: new_comment.message,
-            old_message: Some(old_torrent.message),
+            old_message: Some(old_comment.message),
             uploader: new_comment.uploader,
             date_timestamp: new_comment.date_timestamp,
             edited_timestamp: new_comment.edited_timestamp,
-            old_edited_timestamp: old_torrent.edited_timestamp,
+            old_edited_timestamp: old_comment.edited_timestamp,
             direct_link: new_comment.direct_link,
             update_type: NyaaCommentUpdateType::EDITED
           }]);
