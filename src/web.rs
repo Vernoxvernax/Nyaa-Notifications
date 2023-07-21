@@ -138,8 +138,7 @@ impl Web {
                   let mut update: NyaaTorrent = torrent.clone();
                   // find new / edited / deleted comments
                   update.comments = self.find_comment_changes(torrent.clone(), db_torrent.clone());
-                  if update.comments.iter().any(|c| (c.update_type != NyaaCommentUpdateType::UNCHECKED) &&
-                  (c.update_type != NyaaCommentUpdateType::UNDECIDED)) {
+                  if update.comments.iter().any(|c| c.update_type != NyaaCommentUpdateType::UNDECIDED) {
                     updates.append(&mut vec![NyaaUpdate {
                       new_upload: false,
                       torrent: update
