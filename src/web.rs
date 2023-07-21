@@ -286,6 +286,18 @@ impl Web {
       }
     }
 
+    // add expired' unchecked comments to the array since they would otherwise not trigger an update
+    for old_comment in db_torrent.comments {
+      if (old_comment.update_type == NyaaCommentUpdateType::UNCHECKED) &&
+      (!update.iter().any(|c| {
+        c.user.username == old_comment.user.username &&
+        c.uploader == old_comment.uploader &&
+        c.date_timestamp == old_comment.date_timestamp
+      })) {
+        update.append(&mut vec![old_comment]);
+      }
+    }
+
     for comment in full_torrent.comments {
       if !update.iter().any(|c| {
         c.user.username == comment.user.username &&

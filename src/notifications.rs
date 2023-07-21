@@ -199,6 +199,13 @@ async fn gotify_send_message(module: &ModuleConfig, title: &str, message: String
 async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> Vec<NyaaUpdate> {
   let mut successful_updates: Vec<NyaaUpdate> = vec![];
   for update in updates {
+    if ! update.new_upload && update.torrent.comments.iter().any(|c| {
+      c.update_type == NyaaCommentUpdateType::UNDECIDED || c.update_type == NyaaCommentUpdateType::UNCHECKED
+    }) {
+      successful_updates.append(&mut vec![update]);
+      continue;
+    }
+
     let mut html = HTML_HEAD.to_string();
     let title = html_escape::encode_quoted_attribute(&update.torrent.title).to_string();
     if update.new_upload && module.uploads.unwrap() {
