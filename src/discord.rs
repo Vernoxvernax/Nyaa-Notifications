@@ -79,9 +79,17 @@ impl EventHandler for Handler {
 pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> Result<Vec<NyaaUpdate>, ()> {
   let mut successful_updates: Vec<NyaaUpdate> = vec![];
   let channel = ChannelId(module.discord_channel_id.unwrap());
-  if channel.to_channel(&http).await.is_err() {
-    println!("[INF] Channel \"{:?}\" has been deleted.\nPausing notifications.", channel.as_u64());
-    return Err(());
+  for attempt in 1..5 {
+    if channel.to_channel(&http).await.is_err() {
+      if attempt == 5 {
+        println!("[INF] Channel \"{:?}\" is unreachable.\nPausing notifications.", channel.as_u64());
+        return Err(());
+      } else {
+        thread::sleep(Duration::from_secs(3));
+      }
+    } else {
+      break;
+    }
   }
   for update in updates {
     let title = limit_string_length(&update.torrent.title, 100);
