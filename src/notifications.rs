@@ -94,7 +94,7 @@ async fn gotify_create_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) 
 
     let mut only_comment_updates = update.torrent.clone();
     only_comment_updates.comments = vec![];
-    if !update.torrent.comments.is_empty() || module.comments.unwrap() {
+    if !update.torrent.comments.is_empty() && module.comments.unwrap() {
       for comment in update.torrent.comments {
         match comment.update_type {
           NyaaCommentUpdateType::DELETED => {

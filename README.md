@@ -44,12 +44,19 @@ ___
 
 ### **Installation:**
 
-Head over to the releases grab the binary and run it.
+Clone the repo and run it with `cargo run`.
 
 You should see a new folder `nyaa_notifications`.
 There should be `config.toml` inside it with a little template.
 Make sure you understand the structure of it and specify all the necessary and correct parameters.
 There are no error checks for unsupplied parameters yet, so if you can't read, the binary might exit at any point in time.
+
+___
+
+### **Testing:**
+
+Testing this program with all its different modules is quite impossible without a nyaa-account.
+Please contact me on Discord `@DepriSheep` or create an issue, if you're experiencing any problems.
 
 ___
 

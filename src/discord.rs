@@ -125,7 +125,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
 
     let mut only_comment_updates = update.torrent.clone();
     only_comment_updates.comments = vec![];
-    if !update.torrent.comments.is_empty() || module.comments.unwrap() {
+    if !update.torrent.comments.is_empty() && module.comments.unwrap() {
       for comment in update.torrent.comments {
         thread::sleep(Duration::from_secs(1));
         match comment.update_type {
@@ -161,8 +161,8 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
               channel, module.discord_pinged_role, &title,
               comment.user.avatar.clone().unwrap(),
               vec![
-                (comment.user.username.clone()+" (edited comment)", "```".to_owned()+&comment.message.clone()+"```", true),
-                ("New:".to_string(), "```".to_owned()+&comment.old_message.clone().unwrap()+"```", true)
+                (comment.user.username.clone()+" (edited comment)", "```".to_owned()+&comment.old_message.clone().unwrap()+"```", true),
+                ("New:".to_string(), "```".to_owned()+&comment.message.clone()+"```", true)
               ],
               utc_time,
               ("Comment@Nyaa.si".to_string(), comment.user.username.clone()),
