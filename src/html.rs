@@ -384,6 +384,7 @@ pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
       role = "Trusted".to_string();
     } else if line.ends_with(r#"<div class="col-md-1">Submitter:</div>"#) {
       submitter_line = true;
+      continue;
     } else if submitter_line {
       let mut last_part = "";
       if line.contains(r#"href="/user/"#) {
@@ -402,11 +403,13 @@ pub fn get_uploader_name(html: &str) -> Option<NyaaUser> {
             last_part = part;
           }
         }
-        if !uploader.is_empty() {
+        if ! uploader.is_empty() {
           break;
         }
       }
-    } else if line.contains(r#"<div class="col-md-1">Seeders:</div>"#) {
+    }
+    
+    if line.contains(r#"<div class="col-md-1">Seeders:</div>"#) {
       return Some(NyaaUser {
         anonymous: true,
         role,

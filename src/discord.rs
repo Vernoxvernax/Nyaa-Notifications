@@ -161,8 +161,8 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
               channel, module.discord_pinged_role, &title,
               comment.user.avatar.clone().unwrap(),
               vec![
-                (comment.user.username.clone()+" (edited comment)", "```".to_owned()+&comment.old_message.clone().unwrap()+"```", true),
-                ("New:".to_string(), "```".to_owned()+&comment.message.clone()+"```", true)
+                (comment.user.username.clone()+" (old comment:)", "```".to_owned()+&comment.old_message.clone().unwrap()+"```", true),
+                ("new:".to_string(), "```".to_owned()+&comment.message.clone()+"```", true)
               ],
               utc_time,
               ("Comment@Nyaa.si".to_string(), comment.user.username.clone()),

@@ -31,7 +31,8 @@ ___
 #### Config Notes:
 * You can add multiple `Gotify` and `Email` modules as long as you **don't** change the order of the modules if your database has already been created.
 * The `module_type` parameter specifies the behavior of the program, don't change it to something random.
-* Discord channels have to be configured separately through the slash command framework.
+* Discord channels have to be configured separately through the slash command framework (`/create`, `/pause`, ...).
+* The discord bot needs the `Message Content Intent` permission to work. You can activate it in your discord developer portal.
 
 #### Misc:
 * Hard-coded rate-limits:
