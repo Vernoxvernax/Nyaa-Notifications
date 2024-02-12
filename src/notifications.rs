@@ -198,7 +198,7 @@ async fn gotify_send_message(module: &ModuleConfig, title: &str, message: String
 
 async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> Vec<NyaaUpdate> {
   let mut successful_updates: Vec<NyaaUpdate> = vec![];
-  for update in updates {
+  for mut update in updates {
     if ! update.new_upload && update.torrent.comments.iter().all(|c| {
       c.update_type == NyaaCommentUpdateType::UNDECIDED || c.update_type == NyaaCommentUpdateType::UNCHECKED
     }) {
@@ -244,32 +244,31 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
       ).as_str());
     }
 
+    update.torrent.comments.reverse();
     if module.comments.unwrap() {
-      for comment in update.torrent.comments.clone() {
+      for (index, comment) in update.torrent.comments.clone().iter().enumerate() {
         let timestamp: String;
         let message: String;
         match comment.update_type {
           NyaaCommentUpdateType::DELETED => {
             timestamp = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-            message = comment.message;
+            message = comment.message.clone();
+            update.torrent.comments.remove(index);
           },
           NyaaCommentUpdateType::EDITED => {
             timestamp = chrono::Utc.timestamp_opt(comment.edited_timestamp.unwrap() as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
-            message = comment.message;
+            message = comment.message.clone();
           },
           NyaaCommentUpdateType::NEW => {
             timestamp = chrono::Utc.timestamp_opt(comment.date_timestamp as i64, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string();
-            message = comment.message;
+            message = comment.message.clone();
           },
-          NyaaCommentUpdateType::UNDECIDED => {
-            continue;
-          },
-          NyaaCommentUpdateType::UNCHECKED => {
+          NyaaCommentUpdateType::UNDECIDED | NyaaCommentUpdateType::UNCHECKED => {
             continue;
           }
         }
   
-        let text_color = text_color_from_role(comment.user.role);
+        let text_color = text_color_from_role(comment.user.role.clone());
         let text_style = if comment.user.banned {
           " strike"
         } else {
@@ -312,34 +311,36 @@ async fn email_send_updates(module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> 
 
     let smtp_creds = Credentials::new(module.smtp_username.clone().unwrap(), module.smtp_password.clone().unwrap());
     let domain = module.smtp_domain.clone().unwrap();
-    let already_successful = false;
+    let mut email_template = Message::builder()
+      .from(module.smtp_username.clone().unwrap().parse().unwrap())
+      .subject(module.smtp_subject.clone().unwrap()
+    );
     for recipient in module.smtp_recipients.clone().unwrap() {
-      let email = Message::builder()
-        .from(module.smtp_username.clone().unwrap().parse().unwrap())
-        .to(recipient.parse().unwrap())
-        .subject(module.smtp_subject.clone().unwrap())
-        .multipart(MultiPart::alternative()
-          .singlepart(SinglePart::builder()
-            .header(header::ContentType::TEXT_HTML)
-            .body(html.clone())
-          )
-        )
-      .expect("Failed to create message.");
-      let mail_transport = AsyncSmtpTransport::<Tokio1Executor>::relay(&domain);
-      if mail_transport.is_ok() && ! already_successful {
-        let mail = mail_transport.unwrap().credentials(smtp_creds.clone()).build();
-        if mail.send(email).await.is_err() {
-          eprintln!("Failed to send message");
-          continue
-        } else {
-          let mut prepared_update = update.clone();
-          for comment in prepared_update.torrent.comments.iter_mut() {
-            if (comment.update_type != NyaaCommentUpdateType::UNCHECKED) || (comment.update_type != NyaaCommentUpdateType::UNDECIDED) {
-              comment.update_type = NyaaCommentUpdateType::UNCHECKED;
-            }
+      email_template = email_template.bcc(recipient.parse().unwrap());
+    }
+    let email = email_template.multipart(
+      MultiPart::alternative()
+      .singlepart(SinglePart::builder()
+        .header(header::ContentType::TEXT_HTML)
+        .body(html.clone())
+      )
+    ).expect("Failed to create message.");
+    let mail_transport = AsyncSmtpTransport::<Tokio1Executor>::relay(&domain);
+    if mail_transport.is_ok() {
+      let mail = mail_transport.unwrap().credentials(smtp_creds.clone()).build();
+      if mail.send(email).await.is_err() {
+        eprintln!("Failed to send message");
+        continue
+      } else {
+        let mut database_update = update.clone();
+        for comment in database_update.torrent.comments.iter_mut() {
+          if (comment.update_type != NyaaCommentUpdateType::UNCHECKED) ||
+          (comment.update_type != NyaaCommentUpdateType::UNDECIDED) ||
+          (comment.update_type != NyaaCommentUpdateType::DELETED) {
+            comment.update_type = NyaaCommentUpdateType::UNCHECKED;
           }
-          successful_updates.append(&mut vec![prepared_update]);
         }
+        successful_updates.append(&mut vec![database_update]);
       }
     }
   }

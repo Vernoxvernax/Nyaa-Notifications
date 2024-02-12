@@ -206,10 +206,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
               only_comment_updates.comments.append(&mut vec![finished_comment]);
             };
           },
-          NyaaCommentUpdateType::UNDECIDED => {
-            only_comment_updates.comments.append(&mut vec![comment]);
-          },
-          NyaaCommentUpdateType::UNCHECKED => {
+          NyaaCommentUpdateType::UNDECIDED | NyaaCommentUpdateType::UNCHECKED => {
             only_comment_updates.comments.append(&mut vec![comment]);
           }
         }
@@ -283,8 +280,7 @@ utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, 
 
     let role_id = discord_pinged_role.unwrap();
     if role_id != 0 {
-      if let Err(e) = 
-      channel.send_message(&http, |m| {
+      if let Err(e) = channel.send_message(&http, |m| {
         m.content(RoleId(role_id).mention())
           .embed(|e| {
             e.clone_from(embed);
@@ -298,8 +294,7 @@ utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, 
         eprintln!("Error sending message: {:?}", e);
         return Err(());
       }
-    } else if let Err(e) = 
-    channel.send_message(&http, |m| {
+    } else if let Err(e) = channel.send_message(&http, |m| {
       m.embed(|e| {
           e.clone_from(embed);
           e
