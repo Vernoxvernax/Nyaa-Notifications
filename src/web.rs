@@ -308,6 +308,10 @@ impl Web {
       }
     }
 
+    if update.is_empty() {
+      eprintln!("Incorrect comment amount detected in database.\nReset the database if releases are constantly being downloaded without any updates!");
+    }
+
     update
   }
 
