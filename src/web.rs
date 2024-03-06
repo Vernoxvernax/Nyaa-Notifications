@@ -1,6 +1,12 @@
-use std::{thread, time::Duration};
-use isahc::{prelude::Configurable, RequestExt, http::StatusCode, ReadResponseExt};
-use serde::{Deserialize, Serialize};
+use std::{
+  thread, time::Duration
+};
+use isahc::{
+  prelude::Configurable, RequestExt, http::StatusCode, ReadResponseExt
+};
+use serde::{
+  Deserialize, Serialize
+};
 
 use crate::database::Database;
 use crate::config::{ModuleConfig, ModuleType};
@@ -91,6 +97,7 @@ impl Web {
     for url in &module.feeds.clone().unwrap() {
       let mut feed = self.search_feed(url, module.retrieve_all_pages.unwrap());
       // Check if table exist
+      database.check_database_connection().await.unwrap();
       if database.data_table_exists(module.module_type.to_string(), module_id).await && table_exists {
         let database_torrents = database.get_torrents_from_db(module.module_type.to_string(), module_id).await;
         for torrent in feed.torrents.iter_mut() {
@@ -309,7 +316,8 @@ impl Web {
     }
 
     if update.is_empty() {
-      eprintln!("Incorrect comment amount detected in database.\nReset the database if releases are constantly being downloaded without any updates!");
+      eprintln!("Incorrect comment amount detected in database.\n\
+      Reset the database if releases are constantly being downloaded without any updates!");
     }
 
     update
@@ -358,7 +366,7 @@ impl Web {
       let mut full_torrent = torrent;
       full_torrent.comments = comments;
       full_torrent.uploader = uploader;
-      return Ok(full_torrent);
+      Ok(full_torrent)
     } else {
       Err(())
     }
@@ -371,7 +379,7 @@ impl Web {
       if page.url == *url {
         if page.complete && ! complete {
           for page_torrent in page.torrents {
-            if torrents.iter().find(|t| page_torrent.id == t.id).is_none() {
+            if !torrents.iter().any(|t| page_torrent.id == t.id) {
               torrents.append(&mut vec![page_torrent]);
             }
             if torrents.len() == 85 {
@@ -382,7 +390,7 @@ impl Web {
         } else {
           cache_complete = true;
           for page_torrent in page.torrents.clone() {
-            if torrents.iter().find(|t| page_torrent.id == t.id).is_none() {
+            if !torrents.iter().any(|t| page_torrent.id == t.id) {
               torrents.append(&mut vec![page_torrent]);
             }
           }

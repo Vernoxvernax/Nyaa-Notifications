@@ -1,9 +1,15 @@
-use sqlx::{sqlite, Pool, Sqlite, Row};
+use sqlx::{
+  sqlite, Pool, Sqlite, Row
+};
 
 use crate::NYAA_DATABASE_PATH;
 use crate::discord::unix_to_datetime;
-use crate::web::{NyaaTorrent, NyaaComment, NyaaUpdate, NyaaCommentUpdateType};
-use crate::config::{ModuleConfig, ModuleType};
+use crate::web::{
+  NyaaTorrent, NyaaComment, NyaaUpdate, NyaaCommentUpdateType
+};
+use crate::config::{
+  ModuleConfig, ModuleType
+};
 
 pub struct Database {
   pub database: Pool<Sqlite>
@@ -20,10 +26,21 @@ impl Database {
         )
     .await {
       return Ok(Database {database});
-    } else {
-      eprintln!("Failed to connect or create {}.", *NYAA_DATABASE_PATH);
     }
+    eprintln!("Failed to connect or create {}.", *NYAA_DATABASE_PATH);
     Err(())
+  }
+
+  pub async fn check_database_connection(&mut self) -> Result<(), ()> {
+    if self.database.is_closed() {
+      if let Ok(database) = Database::new().await {
+        self.database = database.database;
+        return Ok(());
+      }
+      Err(())
+    } else {
+      Ok(())
+    }
   }
 
   pub async fn use_pool(database_pool: Pool<Sqlite>) -> Result<Self, ()> {
@@ -63,7 +80,7 @@ impl Database {
       if unix_to_datetime(comment.date_timestamp)+chrono::Duration::hours(1) <= chrono::Utc::now()-chrono::Duration::minutes(1) {
         comment.update_type = NyaaCommentUpdateType::UNDECIDED;
       }
-      // Make it so that comments can't be re-checked when they've already aged more than one hour. 
+      // Make it so that comments can't be re-checked when they've already aged more than one hour.
     }
 
     if update.new_upload {
@@ -184,7 +201,6 @@ impl Database {
         let retrieve_all_pages: bool = row.get(5);
         let pinged_role_str: String = row.get(6);
         let pinged_role = pinged_role_str.parse::<u64>().unwrap();
-
         let feeds: Vec<String> = feeds_string_list.split(',').map(|str| str.to_string()).collect();
 
         channels.append(&mut vec![ModuleConfig {

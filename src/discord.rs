@@ -1,13 +1,33 @@
-use std::{sync::Arc, thread, time::Duration};
-use chrono::{DateTime, Utc, NaiveDateTime};
-use serenity::model::application::interaction::Interaction;
-use serenity::model::prelude::{InteractionResponseType, Ready, Activity, ChannelId, command::Command, ReactionType, component::ButtonStyle, RoleId};
-use serenity::prelude::{EventHandler, Context, Mentionable};
-use serenity::{async_trait, http::Http, utils::Color};
-use serenity::builder::{CreateEmbed, CreateComponents};
-use sqlx::{Pool, Sqlite};
+use std::{
+  sync::Arc, thread, time::Duration
+};
+use chrono::{
+  DateTime, Utc, NaiveDateTime
+};
+use serenity::{
+  all::{
+    ActivityData, ButtonStyle, Command, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, Interaction
+  },
+  prelude::{
+    EventHandler, Context, Mentionable
+  },
+  model::{
+    prelude::{
+      Ready, ChannelId, ReactionType, RoleId
+    },
+    Color
+  },
+  builder::CreateEmbed,
+  http::Http,
+  async_trait
+};
+use sqlx::{
+  Pool, Sqlite
+};
 
-use crate::web::{NyaaUpdate, NyaaCommentUpdateType, NyaaComment};
+use crate::web::{
+  NyaaUpdate, NyaaCommentUpdateType, NyaaComment
+};
 use crate::config::ModuleConfig;
 use crate::commands;
 
@@ -21,24 +41,20 @@ pub struct Handler {
 #[async_trait]
 impl EventHandler for Handler {
   async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-    if let Interaction::ApplicationCommand(command) = interaction {
+    if let Interaction::Command(command) = interaction {
       // println!("Received command interaction: {:#?}", command); // uncomment if you want to monitor all commands being answered by the bot
       let content = match command.data.name.as_str() {
-        "help" => commands::help::run(&command.data.options),
+        "help" => commands::help::run(&command.data.options).await,
         "create" => commands::create::run(&command.data.options, &self.discord_bot_id, self.database_pool.clone()).await,
         "reset" => commands::reset::run(&command.data.options, &self.discord_bot_id, self.database_pool.clone()).await,
         "pause" => commands::pause::run(&command.data.options, &self.discord_bot_id, self.database_pool.clone()).await,
         "activity" => commands::activity::run(&command.data.options, &ctx).await,
         _ => "Not implemented >~< - (Contact: @DepriSheep)".to_string(),
       };
-      if let Err(why) = command
-        .create_interaction_response(&ctx.http, |response| {
-          response
-            .kind(InteractionResponseType::ChannelMessageWithSource)
-            .interaction_response_data(|message| message.content(content))
-        })
-        .await
-      {
+      
+      let data = CreateInteractionResponseMessage::new().content(content);
+      let builder = CreateInteractionResponse::Message(data);
+      if let Err(why) = command.create_response(&ctx.http, builder).await {
         println!("Cannot respond to slash command: {}", why);
       }
     }
@@ -47,46 +63,35 @@ impl EventHandler for Handler {
   async fn ready(&self, ctx: Context, ready: Ready) {
     println!("[Discord] {} is conntected.", ready.user.name);
     if self.discord_activity_type == "listening" {
-      ctx.set_activity(Activity::listening(&self.discord_activity_text)).await;
+      ctx.set_activity(Some(ActivityData::listening(&self.discord_activity_text)));
     } else if self.discord_activity_type == "playing" {
-      ctx.set_activity(Activity::playing(&self.discord_activity_text)).await;
+      ctx.set_activity(Some(ActivityData::playing(&self.discord_activity_text)));
     } else if self.discord_activity_type == "watching" {
-      ctx.set_activity(Activity::watching(&self.discord_activity_text)).await;
+      ctx.set_activity(Some(ActivityData::watching(&self.discord_activity_text)));
     } else if self.discord_activity_type == "competing" {
-      ctx.set_activity(Activity::competing(&self.discord_activity_text)).await;
+      ctx.set_activity(Some(ActivityData::competing(&self.discord_activity_text)));
     } else {
       eprintln!("Activity type not found. Options are: \"playing; watching; competing; listening\".");
     }
-
-    Command::create_global_application_command(&ctx.http, |command| {
-      commands::help::register(command)
-    }).await.unwrap();
-    Command::create_global_application_command(&ctx.http, |command| {
-      commands::create::register(command)
-    }).await.unwrap();
-    Command::create_global_application_command(&ctx.http, |command| {
-      commands::reset::register(command)
-    }).await.unwrap();
-    Command::create_global_application_command(&ctx.http, |command| {
-      commands::pause::register(command)
-    }).await.unwrap();
-    Command::create_global_application_command(&ctx.http, |command| {
-      commands::activity::register(command)
-    }).await.unwrap();
+    
+    Command::create_global_command(&ctx.http, commands::help::register()).await.unwrap();
+    Command::create_global_command(&ctx.http, commands::create::register()).await.unwrap();
+    Command::create_global_command(&ctx.http, commands::reset::register()).await.unwrap();
+    Command::create_global_command(&ctx.http, commands::pause::register()).await.unwrap();
+    Command::create_global_command(&ctx.http, commands::activity::register()).await.unwrap();
   }
 }
 
 pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, updates: Vec<NyaaUpdate>) -> Result<Vec<NyaaUpdate>, ()> {
   let mut successful_updates: Vec<NyaaUpdate> = vec![];
-  let channel = ChannelId(module.discord_channel_id.unwrap());
+  let channel = ChannelId::new(module.discord_channel_id.unwrap());
   for attempt in 1..5 {
     if channel.to_channel(&http).await.is_err() {
       if attempt == 5 {
-        println!("[INF] Channel \"{:?}\" is unreachable.\nPausing notifications.", channel.as_u64());
+        println!("[INF] Channel \"{:?}\" is unreachable.\nPausing notifications.", channel.get());
         return Err(());
-      } else {
-        thread::sleep(Duration::from_secs(3));
       }
+      thread::sleep(Duration::from_secs(3));
     } else {
       break;
     }
@@ -234,7 +239,7 @@ pub async fn discord_send_updates(http: Arc<Http>, module: &ModuleConfig, update
 
 pub fn unix_to_datetime(timestamp: f64) -> DateTime<Utc> {
   let naive_datetime = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).unwrap();
-  DateTime::<Utc>::from_utc(naive_datetime, Utc)
+  DateTime::from_naive_utc_and_offset(naive_datetime, Utc)
 }
 
 pub fn limit_string_length(input: &str, limit: usize) -> String {
@@ -253,7 +258,7 @@ pub fn limit_string_length(input: &str, limit: usize) -> String {
 async fn send_discord_embed(http: &Arc<Http>, channel: ChannelId, discord_pinged_role: Option<u64>, title: &str, thumbnail: String, fields: Vec<(String, String, bool)>,
 utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, String), button_emojis: (ReactionType, ReactionType)) -> Result<(), ()> {
   for field in create_embeds_after_size(fields) {
-    let mut embed: &mut CreateEmbed = &mut serenity::builder::CreateEmbed::default();
+    let mut embed: CreateEmbed = serenity::builder::CreateEmbed::default();
     embed = embed
       .title(title)
       .color(Color::BLITZ_BLUE)
@@ -261,49 +266,64 @@ utc_time: DateTime<Utc>, button_labels: (String, String), button_urls: (String, 
       .fields(field)
     .timestamp(utc_time);
 
-    let mut buttons: &mut CreateComponents = &mut serenity::builder::CreateComponents::default();
-    buttons = buttons
-      .create_action_row(|r| {
-        r.create_button(|b| {
-          b.label(button_labels.0.clone())
-          .url(button_urls.0.clone())
-          .style(ButtonStyle::Link)
-          .emoji(button_emojis.0.clone())
-        })
-        .create_button(|b| {
-          b.label(button_labels.1.clone())
-          .url(button_urls.1.clone())
-          .style(ButtonStyle::Link)
-          .emoji(button_emojis.1.clone())
-        })
-    });
+    let buttons: Vec<CreateButton> = vec![
+      CreateButton::new_link(button_urls.0.clone())
+      .label(button_labels.0.clone())
+      .style(ButtonStyle::Primary)
+      .emoji(button_emojis.0.clone()),
+      CreateButton::new_link(button_urls.1.clone())
+      .label(button_labels.1.clone())
+      .style(ButtonStyle::Primary)
+      .emoji(button_emojis.1.clone()),
+    ];
+    // let mut buttons: &mut CreateComponents = &mut serenity::builder::CreateButton::new();
+    // let mut buttons = CreateButton::;
+    // buttons = buttons
+    //   .create_action_row(|r| {
+    //     r.create_button(|b| {
+    //       b.label(button_labels.0.clone())
+    //       .url(button_urls.0.clone())
+    //       .style(ButtonStyle::Link)
+    //       .emoji(button_emojis.0.clone())
+    //     })
+    //     .create_button(|b| {
+    //       b.label(button_labels.1.clone())
+    //       .url(button_urls.1.clone())
+    //       .style(ButtonStyle::Link)
+    //       .emoji(button_emojis.1.clone())
+    //     })
+    // });
 
     let role_id = discord_pinged_role.unwrap();
     if role_id != 0 {
-      if let Err(e) = channel.send_message(&http, |m| {
-        m.content(RoleId(role_id).mention())
-          .embed(|e| {
-            e.clone_from(embed);
-            e
-          })
-          .components(|c| {
-            c.clone_from(buttons);
-            c
-          })
-      }).await {
+      if let Err(e) = channel.send_message(&http,
+        CreateMessage::new()
+          .content(RoleId::new(role_id).mention().to_string())
+          .embed(
+            embed
+          )
+          .button(
+            buttons.get(0).unwrap().clone()
+          )
+          .button(
+            buttons.get(1).unwrap().clone()
+          )
+      ).await {
         eprintln!("Error sending message: {:?}", e);
         return Err(());
       }
-    } else if let Err(e) = channel.send_message(&http, |m| {
-      m.embed(|e| {
-          e.clone_from(embed);
-          e
-        })
-        .components(|c| {
-          c.clone_from(buttons);
-          c
-        })
-    }).await {
+    } else if let Err(e) = channel.send_message(&http,
+      CreateMessage::new()
+        .embed(
+          embed
+        )
+        .button(
+          buttons.get(0).unwrap().clone()
+        )
+        .button(
+          buttons.get(1).unwrap().clone()
+        )
+    ).await {
       eprintln!("Error sending message: {:?}", e);
       return Err(());
     }

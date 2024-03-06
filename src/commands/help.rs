@@ -1,8 +1,8 @@
-use serenity::builder::CreateApplicationCommand;
-use serenity::model::Permissions;
-use serenity::model::prelude::interaction::application_command::CommandDataOption;
+use serenity::all::{
+  Permissions, CreateCommand, CommandDataOption
+};
 
-pub fn run(_options: &[CommandDataOption]) -> String {
+pub async fn run(_options: &[CommandDataOption]) -> String {
   "```\
 [Nyaa-Notifications]
 
@@ -14,7 +14,8 @@ Commands:
   \"activity\" - Change current activity-text of the discord bot```".to_string()
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-  command.name("help").description("Small description of available commands")
+pub fn register() -> CreateCommand {
+  CreateCommand::new("help")
+  .description("Small description of available commands")
   .default_member_permissions(Permissions::ADMINISTRATOR)
 }

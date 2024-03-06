@@ -1,14 +1,19 @@
-use serenity::builder::CreateApplicationCommand;
-use serenity::model::Permissions;
-use serenity::model::prelude::ChannelType;
-use serenity::model::prelude::command::CommandOptionType;
-use serenity::model::prelude::interaction::application_command::CommandDataOption;
-use sqlx::{Sqlite, Pool};
+use serenity::all::{
+  ChannelType, Permissions, CreateCommand, CreateCommandOption, CommandOptionType, CommandDataOptionValue, CommandDataOption
+};
+use sqlx::{
+  Sqlite, Pool
+};
 
 use crate::database::Database;
 
 pub async fn run(options: &[CommandDataOption], discord_bot_id: &String, database_pool: Pool<Sqlite>) -> String {
-	let channel_id: u64 = options.get(0).unwrap().value.as_ref().unwrap().as_str().unwrap().parse().unwrap();
+	let channel_id = match options.get(0).unwrap().value {
+    CommandDataOptionValue::Integer(integer) => integer as u64,
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
 
   let mut database: Database;
   if let Ok(database_) = Database::use_pool(database_pool).await {
@@ -27,16 +32,17 @@ pub async fn run(options: &[CommandDataOption], discord_bot_id: &String, databas
 	"Channel configuration successfully removed.".to_string()
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-	command
-		.name("reset").description("Remove configurations for the current channel")
-		.create_option(|option| {
-      option
-        .name("channel")
-        .description("Channel to receive the notifications")
-        .kind(CommandOptionType::Channel)
-        .channel_types(&[ChannelType::Text])
-        .required(true)
-    })
+pub fn register() -> CreateCommand {
+	CreateCommand::new("reset")
+		.description("Remove configurations for the current channel")
+		.add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Channel,
+        "channel",
+        "Channel that had received notifications"
+      )
+      .channel_types([ChannelType::Text].to_vec())
+      .required(true)
+    )
 		.default_member_permissions(Permissions::ADMINISTRATOR)
 }

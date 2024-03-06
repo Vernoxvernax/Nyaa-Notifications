@@ -1,7 +1,15 @@
-use std::{path::Path, fs::{File, self}, io::Write};
+use std::{
+  fs::{
+    File, self
+  },
+  path::Path,
+  io::Write
+};
 use serde::Deserialize;
 
-use crate::{NYAA_FOLDER_PATH, NYAA_CONFIG_PATH, database::Database};
+use crate::{
+  NYAA_FOLDER_PATH, NYAA_CONFIG_PATH, database::Database
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -65,7 +73,7 @@ impl Config {
       if let Ok(file) = &fs::read_to_string(Path::new(&NYAA_CONFIG_PATH.to_string())) {
         match toml::from_str::<Config>(file) {
           Ok(config) => {
-            if config.module.iter().all(|module| ! module.active) {
+            if config.module.iter().all(|module| !module.active) {
               println!("[INF] None of the modules have been activated.\nPlease edit {}.", *NYAA_CONFIG_PATH);
               return Err(());
             }

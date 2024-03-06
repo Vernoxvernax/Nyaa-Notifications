@@ -1,9 +1,21 @@
-use std::{sync::Arc, time::Duration, thread};
 use chrono::TimeZone;
-use isahc::{prelude::Configurable, RequestExt, http::StatusCode};
-use lettre::{transport::smtp::authentication::Credentials, Message, message::{MultiPart, SinglePart, header}, AsyncSmtpTransport, Tokio1Executor, AsyncTransport};
 use serde_json::json;
-use serenity::{prelude::GatewayIntents, http::Http, Client, framework::StandardFramework};
+use std::{
+  sync::Arc, time::Duration, thread
+};
+use isahc::{
+  prelude::Configurable, RequestExt, http::StatusCode
+};
+use lettre::{
+  message::{
+    MultiPart, SinglePart, header
+  },
+  AsyncSmtpTransport, Tokio1Executor, AsyncTransport,
+  transport::smtp::authentication::Credentials, Message,
+};
+use serenity::{
+  prelude::GatewayIntents, http::Http, Client
+};
 
 use crate::config::{ModuleConfig, ModuleType};
 use crate::discord::{Handler, discord_send_updates, limit_string_length};
@@ -27,9 +39,9 @@ impl Notifications {
           discord_bot_id: module.discord_bot_id.unwrap(),
           discord_activity_type: module.discord_bot_activity_type.unwrap(),
           discord_activity_text: module.discord_bot_activity_text.unwrap()
-        }).framework(StandardFramework::new())
+        })
         .await {
-          http = client.cache_and_http.http.clone();
+          http = client.http.clone();
           tokio::spawn(async move {
             loop {
               if client.start().await.is_err() {

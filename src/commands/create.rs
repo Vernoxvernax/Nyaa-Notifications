@@ -1,21 +1,51 @@
-use serenity::builder::CreateApplicationCommand;
-use serenity::model::Permissions;
-use serenity::model::prelude::interaction::application_command::CommandDataOption;
-use serenity::model::prelude::command::CommandOptionType;
-use serenity::model::prelude::ChannelType;
-use sqlx::{Pool, Sqlite};
+use serenity::all::{
+  Permissions, CreateCommand, CreateCommandOption, CommandOptionType, CommandDataOptionValue, CommandDataOption, ChannelType
+};
+use sqlx::{
+  Pool, Sqlite
+};
 
 use crate::database::Database;
 
 pub async fn run(options: &[CommandDataOption], discord_bot_id: &String, database_pool: Pool<Sqlite>) -> String {
-  let channel_id: u64 = options.get(0).unwrap().value.as_ref().unwrap().as_str().unwrap().parse().unwrap();
-  let url_input = options.get(1).unwrap().value.as_ref().unwrap().as_str().unwrap();
-  let uploads = options.get(2).unwrap().value.as_ref().unwrap().as_bool().unwrap();
-  let comments = options.get(3).unwrap().value.as_ref().unwrap().as_bool().unwrap();
-  let complete = options.get(4).unwrap().value.as_ref().unwrap().as_bool().unwrap();
+  let channel_id = match options.get(0).unwrap().value {
+    CommandDataOptionValue::Channel(integer) => integer.get(),
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
+  let url_input = match &options.get(1).unwrap().value {
+    CommandDataOptionValue::String(text) => text,
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
+  let uploads = match options.get(2).unwrap().value {
+    CommandDataOptionValue::Boolean(boolean) => boolean,
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
+  let comments = match options.get(3).unwrap().value {
+    CommandDataOptionValue::Boolean(boolean) => boolean,
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
+  let complete = match options.get(4).unwrap().value {
+    CommandDataOptionValue::Boolean(boolean) => boolean,
+    _ => {
+      panic!("Discord returned invalid command options.")
+    }
+  };
   let pinged_role: String = match &options.get(5) {
     Some(arg) => {
-      arg.value.as_ref().unwrap().as_str().unwrap().replace('"', "")
+      match &arg.value {
+        CommandDataOptionValue::Role(role) => role.get().to_string(),
+        _ => {
+          panic!("Discord returned invalid command options.")
+        }
+      }
     },
     None => {
       "0".to_string()
@@ -37,56 +67,63 @@ pub async fn run(options: &[CommandDataOption], discord_bot_id: &String, databas
 
   println!("[INF] {:?} configured with {:?} | {} {} {}", channel_id, urls, uploads, comments, complete);
   
-  database.add_discord_channel(discord_bot_id, channel_id, urls, (comments, uploads, complete), pinged_role).await;
+  database.add_discord_channel(discord_bot_id, channel_id, urls, (comments, uploads, complete), pinged_role.clone()).await;
   "Channel successfully configured.".to_string()
 }
 
-pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-  command
-    .name("create").description("Setup notifications for the current channel")
-    .create_option(|option| {
-      option
-        .name("channel")
-        .description("Channel to receive the notifications")
-        .kind(CommandOptionType::Channel)
-        .channel_types(&[ChannelType::Text])
-        .required(true)
-    })
-    .create_option(|option| {
-      option
-        .name("url")
-        .description("Nyaa URL separated by `,` (f.e.: `https://nyaa.si/user/neoborn, https://nyaa.si/user/djatom`)")
-        .kind(CommandOptionType::String)
-        .min_length(5)
-        .required(true)
-    })
-    .create_option(|option| {
-      option
-        .name("uploads")
-        .description("Notifications for uploads")
-        .kind(CommandOptionType::Boolean)
-        .required(true)
-    })
-    .create_option(|option| {
-      option
-        .name("comments")
-        .description("Notifications for comments")
-        .kind(CommandOptionType::Boolean)
-        .required(true)
-    })
-    .create_option(|option| {
-      option
-        .name("complete")
-        .description("Check every page of the query, or all of them?")
-        .kind(CommandOptionType::Boolean)
-        .required(true)
-    })
-    .create_option(|option| {
-      option
-        .name("pinged-role")
-        .description("Ping this role when sending the notifications")
-        .kind(CommandOptionType::Role)
-        .required(false)
-    })
+pub fn register() -> CreateCommand {
+  CreateCommand::new("create")
+    .description("Setup notifications for the current channel")
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Channel,
+        "channel",
+        "Channel to receive the notifications"
+      )
+      .channel_types([ChannelType::Text].to_vec())
+      .required(true)
+    )
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::String,
+        "url",
+        "Nyaa URL separated by `,` (f.e.: `https://nyaa.si/user/neoborn, https://nyaa.si/user/djatom`)"
+      )
+    .min_length(5)
+    .required(true)
+    )
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Boolean,
+        "uploads",
+        "Notifications for uploads"
+      )
+      .required(true)
+    )
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Boolean,
+        "comments",
+        "Notifications for comments",
+      )
+      .kind(CommandOptionType::Boolean)
+      .required(true)
+    )
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Boolean,
+        "complete",
+        "Check every page of the query, or all of them?"
+      )
+      .required(true)
+    )
+    .add_option(
+      CreateCommandOption::new(
+        CommandOptionType::Role,
+        "pinged-role",
+        "Ping this role when sending the notifications"
+      )
+      .required(false)
+    )
     .default_member_permissions(Permissions::ADMINISTRATOR)
 }

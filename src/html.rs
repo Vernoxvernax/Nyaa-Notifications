@@ -1,4 +1,6 @@
-use crate::web::{NyaaTorrent, NyaaComment, NyaaUser};
+use crate::web::{
+  NyaaTorrent, NyaaComment, NyaaUser
+};
 
 pub fn serialize_feed(html: String, domain: &str) -> Result<(Vec<NyaaTorrent>, bool), String> {
   let id_reg = regex::Regex::new(r"/download/([0-9]{5,})").unwrap();

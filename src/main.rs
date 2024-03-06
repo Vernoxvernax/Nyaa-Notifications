@@ -1,10 +1,14 @@
-use std::{process::ExitCode, thread, time::Duration};
 use database::Database;
 use lazy_static::lazy_static;
 use log::debug;
+use std::{
+  process::ExitCode, thread, time::Duration
+};
 
 use web::Web;
-use config::{Config, ModuleType};
+use config::{
+  Config, ModuleType
+};
 use notifications::Notifications;
 
 mod commands;
