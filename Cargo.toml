@@ -2,24 +2,24 @@
 name = "nyaa-notifications"
 description = "Utility to monitor uploads and their comments on the popular site nyaa.si"
 version = "0.2.1"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 readme = "README.md"
 authors = ["DepriSheep"]
 repository = "https://github.com/Vernoxvernax/Nyaa-Notifications"
 
 [dependencies]
-lettre = { version = "0.11.7", default-features = false, features = ["smtp-transport", "tokio1-rustls-tls", "builder"] }
-sqlx = { version = "0.7.4", features = ["runtime-tokio", "tls-native-tls", "sqlite"] }
-tokio = { version = "1.38.0", features = ["full"] }
+lettre = { version = "0.11.14", default-features = false, features = ["smtp-transport", "tokio1-rustls-tls", "builder"] }
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "tls-native-tls", "sqlite"] }
+tokio = { version = "1.43.0", features = ["full"] }
 html-escape = "0.2.13"
-lazy_static = "1.4.0"
-serde = "1.0.203"
-serde_json = "1.0.117"
-toml = "0.8.13"
-chrono = "0.4.38"
+lazy_static = "1.5.0"
+serde = "1.0.218"
+serde_json = "1.0.140"
+toml = "0.8.20"
+chrono = "0.4.40"
 isahc = "1.7.2"
-regex = "1.10.4"
-serenity = "0.12.2"
-log = "0.4.21"
-env_logger = "0.11.3"
+regex = "1.11.1"
+serenity = "0.12.4"
+log = "0.4.26"
+env_logger = "0.11.6"
