@@ -293,50 +293,9 @@ pub fn serialize_torrent(html: &str, page_url: String, domain: &str) -> (Option<
               break;
             }
           }
-          if (message.contains("![](") || message.contains("![") && message.contains("](")) && message.contains(')') {
-            let mut remove_these: Vec<(usize, usize, usize, usize, usize)> = vec![];
-            let mut exclamation: bool = false;
-            let mut open_sq_br: bool = false;
-            let mut closed_sq_br: bool = false;
-            let mut open_ro_br: bool = false;
-            let mut values = (0, 0, 0, 0, 0);
-            
-            for (index, ch) in message.char_indices() {
-              if ch == '!' {
-                values.0 = index;
-                exclamation = true;
-              } else if ch == '[' && exclamation {
-                open_sq_br = true;
-                values.1 = index;
-              } else if ch == ']' && open_sq_br && exclamation {
-                closed_sq_br = true;
-                values.2 = index;
-              } else if ch == '(' && closed_sq_br && open_sq_br && exclamation {
-                values.3 = index;
-                open_ro_br = true;
-              } else if ch == ')' && open_ro_br {
-                exclamation = false;
-                open_sq_br = false;
-                closed_sq_br = false;
-                open_ro_br = false;
-                values.4 = index;
-                remove_these.append(&mut vec![(values)]);
-              } else if ! (open_ro_br || open_sq_br) {
-                exclamation = false;
-                open_sq_br = false;
-                closed_sq_br = false;
-                open_ro_br = false;
-              }
-            };
 
-            for (excl, start, mid, start2, end) in remove_these.iter().rev() {
-              message.remove(*end);
-              message.remove(*start2);
-              message.remove(*mid);
-              message.remove(*start);
-              message.remove(*excl);
-            }
-          }
+          let re = regex::Regex::new(r"!\[([^\]]*)\]\(([^\)]+)\)").unwrap();
+          message = re.replace_all(&message, "$1 $2").to_string();
 
           comments.append(&mut [NyaaComment {
             user: NyaaUser {
